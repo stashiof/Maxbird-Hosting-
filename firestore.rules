@@ -1,0 +1,167 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'maiafahim1234@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'createdAt']) &&
+        data.uid is string &&
+        data.uid.size() >= 1 &&
+        data.uid.size() <= 128 &&
+        data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidPortalSettings(data) {
+      return data.keys().hasAll([
+        'appName',
+        'apkDownloadUrl',
+        'r2BucketPublicDomain',
+        'r2ObjectKey',
+        'appVersion',
+        'fileSize',
+        'telegramHandle',
+        'telegramUrl',
+        'noticeText',
+        'releaseNotes',
+        'downloadCount',
+        'minAndroidVersion',
+        'lastUpdated',
+        'sha256Short',
+        'ownerId',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'appName',
+        'apkDownloadUrl',
+        'r2BucketPublicDomain',
+        'r2ObjectKey',
+        'appVersion',
+        'fileSize',
+        'telegramHandle',
+        'telegramUrl',
+        'noticeText',
+        'releaseNotes',
+        'downloadCount',
+        'minAndroidVersion',
+        'lastUpdated',
+        'sha256Short',
+        'ownerId',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.appName is string && data.appName.size() >= 1 && data.appName.size() <= 100 &&
+      data.apkDownloadUrl is string && data.apkDownloadUrl.size() >= 1 && data.apkDownloadUrl.size() <= 1000 &&
+      data.r2BucketPublicDomain is string && data.r2BucketPublicDomain.size() >= 0 && data.r2BucketPublicDomain.size() <= 500 &&
+      data.r2ObjectKey is string && data.r2ObjectKey.size() >= 0 && data.r2ObjectKey.size() <= 300 &&
+      data.appVersion is string && data.appVersion.size() >= 1 && data.appVersion.size() <= 60 &&
+      data.fileSize is string && data.fileSize.size() >= 1 && data.fileSize.size() <= 40 &&
+      data.telegramHandle is string && data.telegramHandle.size() >= 1 && data.telegramHandle.size() <= 80 &&
+      data.telegramUrl is string && data.telegramUrl.size() >= 1 && data.telegramUrl.size() <= 300 &&
+      data.noticeText is string && data.noticeText.size() >= 1 && data.noticeText.size() <= 500 &&
+      data.releaseNotes is string && data.releaseNotes.size() >= 0 && data.releaseNotes.size() <= 1000 &&
+      data.downloadCount is int && data.downloadCount >= 0 && data.downloadCount <= 100000000 &&
+      data.minAndroidVersion is string && data.minAndroidVersion.size() >= 1 && data.minAndroidVersion.size() <= 50 &&
+      data.lastUpdated is string && data.lastUpdated.size() >= 1 && data.lastUpdated.size() <= 60 &&
+      data.sha256Short is string && data.sha256Short.size() >= 1 && data.sha256Short.size() <= 150 &&
+      data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    match /admins/{adminId} {
+      allow get: if isVerifiedUser() && isValidId(adminId) && (request.auth.uid == adminId || isBootstrappedAdmin());
+      allow list: if false;
+      allow create: if isBootstrappedAdmin() &&
+        isValidId(adminId) &&
+        isValidAdminUser(incoming()) &&
+        incoming().uid == adminId &&
+        incoming().uid == request.auth.uid &&
+        incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /portal_settings/{settingId} {
+      // Single-document read allowed for public visitors so the portal loads live APK URL and notice
+      allow get: if isValidId(settingId) && settingId == 'main';
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+        isValidId(settingId) &&
+        settingId == 'main' &&
+        isValidPortalSettings(incoming()) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isValidId(settingId) &&
+        settingId == 'main' &&
+        isValidPortalSettings(incoming()) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action 1: Verified Admin full update
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'appName',
+            'apkDownloadUrl',
+            'r2BucketPublicDomain',
+            'r2ObjectKey',
+            'appVersion',
+            'fileSize',
+            'telegramHandle',
+            'telegramUrl',
+            'noticeText',
+            'releaseNotes',
+            'downloadCount',
+            'minAndroidVersion',
+            'lastUpdated',
+            'sha256Short',
+            'updatedAt'
+          ])) ||
+          // Action 2: Atomic +1 download counter increment
+          (incoming().diff(existing()).affectedKeys().hasOnly(['downloadCount', 'updatedAt']) &&
+           incoming().downloadCount == existing().downloadCount + 1)
+        );
+
+      allow delete: if false;
+    }
+  }
+}

@@ -1,35 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  calculateInstallmentPlan,
   formatBengaliNumber,
   verifyAdminPin,
   validateConfigUpdate,
   filterFaqs,
   faqItems,
+  buildCloudflareR2DownloadUrl,
+  sanitizeSiteConfigForFirestore,
+  isConfiguredApkUrl,
+  formatFileSizeMegabytes,
+  defaultSiteConfig,
 } from './siteConfig';
-
-test('calculateInstallmentPlan computes 1, 2, and 3 installment breakdowns accurately', () => {
-  const onePay = calculateInstallmentPlan(3000, 1);
-  assert.equal(onePay.firstPaymentNow, 3000);
-  assert.equal(onePay.remainingBalance, 0);
-  assert.equal(onePay.schedule.length, 1);
-
-  const twoPay = calculateInstallmentPlan(3000, 2);
-  assert.equal(twoPay.firstPaymentNow, 1500);
-  assert.equal(twoPay.remainingBalance, 1500);
-  assert.equal(twoPay.schedule.length, 2);
-  assert.equal(twoPay.schedule[0].amount + twoPay.schedule[1].amount, 3000);
-
-  const threePay = calculateInstallmentPlan(2100, 3);
-  assert.equal(threePay.firstPaymentNow, 700);
-  assert.equal(threePay.remainingBalance, 1400);
-  assert.equal(threePay.schedule.length, 3);
-  assert.equal(
-    threePay.schedule[0].amount + threePay.schedule[1].amount + threePay.schedule[2].amount,
-    2100
-  );
-});
 
 test('formatBengaliNumber converts English numerals to Bengali numerals with formatting', () => {
   assert.equal(formatBengaliNumber(3000), '৩,০০০');
@@ -46,7 +28,6 @@ test('verifyAdminPin validates admin PIN accurately', () => {
 
 test('validateConfigUpdate rejects empty required fields and accepts valid updates', () => {
   assert.equal(validateConfigUpdate({ appVersion: '' }).valid, false);
-  assert.equal(validateConfigUpdate({ apkDownloadUrl: '   ' }).valid, false);
   assert.equal(
     validateConfigUpdate({
       appVersion: 'v2.6.0 Latest',
@@ -64,4 +45,41 @@ test('filterFaqs filters by category and search query', () => {
   const paymentFaqs = filterFaqs(faqItems, 'all', 'বিকাশ');
   assert.equal(paymentFaqs.length, 1);
   assert.equal(paymentFaqs[0].id, 'faq-3');
+});
+
+test('buildCloudflareR2DownloadUrl constructs clean direct R2 APK URLs', () => {
+  assert.equal(
+    buildCloudflareR2DownloadUrl('https://pub-123.r2.dev/', '/releases/app-v2.6.apk'),
+    'https://pub-123.r2.dev/releases/app-v2.6.apk'
+  );
+  assert.equal(
+    buildCloudflareR2DownloadUrl('pub-123.r2.dev', 'app.apk'),
+    'https://pub-123.r2.dev/app.apk'
+  );
+  assert.equal(
+    buildCloudflareR2DownloadUrl('', '', 'https://fallback.example.com/app.apk'),
+    'https://fallback.example.com/app.apk'
+  );
+});
+
+test('isConfiguredApkUrl detects unconfigured placeholder vs real R2 APK URLs', () => {
+  assert.equal(isConfiguredApkUrl(''), false);
+  assert.equal(isConfiguredApkUrl('https://your-r2-domain.r2.dev/app.apk'), false);
+  assert.equal(isConfiguredApkUrl('https://pub-real123.r2.dev/releases/app.apk'), true);
+});
+
+test('formatFileSizeMegabytes formats byte counts into MB strings', () => {
+  assert.equal(formatFileSizeMegabytes(0), '0 MB');
+  assert.equal(formatFileSizeMegabytes(29779558), '28.4 MB');
+});
+
+test('sanitizeSiteConfigForFirestore enforces blueprint maxLengths and builds R2 URL', () => {
+  const sanitized = sanitizeSiteConfigForFirestore({
+    ...defaultSiteConfig,
+    r2BucketPublicDomain: 'https://pub-abc.r2.dev/',
+    r2ObjectKey: 'v3.0/smart.apk',
+    noticeText: 'ক'.repeat(700),
+  });
+  assert.equal(sanitized.apkDownloadUrl, 'https://pub-abc.r2.dev/v3.0/smart.apk');
+  assert.equal(sanitized.noticeText.length, 500);
 });

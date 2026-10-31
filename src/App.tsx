@@ -20,7 +20,16 @@ import {
   SiteConfig,
   defaultSiteConfig,
   formatBengaliNumber,
+  buildCloudflareR2DownloadUrl,
+  isConfiguredApkUrl,
 } from './config/siteConfig';
+import {
+  auth,
+  onAuthStateChanged,
+  User,
+  subscribeToPortalSettings,
+  incrementFirestoreDownloadCount,
+} from './firebase';
 import { MobileAppMockup, PhoneScreenTab } from './components/MobileAppMockup';
 import { StepByStepGuide } from './components/StepByStepGuide';
 import { FeaturesAndInstallmentSection } from './components/FeaturesAndInstallmentSection';
@@ -31,7 +40,7 @@ import {
   AdminSettingsModal,
 } from './components/DownloadAndAdminModals';
 
-const STORAGE_KEY_CONFIG = 'smart_shiksha_site_config_v1';
+const STORAGE_KEY_CONFIG = 'smart_shiksha_site_config_v2';
 const STORAGE_KEY_THEME = 'smart_shiksha_theme_v1';
 
 export default function App() {
@@ -47,6 +56,10 @@ export default function App() {
     return defaultSiteConfig;
   });
 
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [firestoreDocExists, setFirestoreDocExists] = useState(false);
+  const [isCloudSynced, setIsCloudSynced] = useState(false);
+
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_THEME);
@@ -61,6 +74,36 @@ export default function App() {
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Firebase Auth & Real-time Firestore listener
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+
+    const unsubFirestore = subscribeToPortalSettings(
+      (cloudConfig, docExists) => {
+        setFirestoreDocExists(docExists);
+        setIsCloudSynced(true);
+        if (docExists) {
+          setSiteConfig(cloudConfig);
+          try {
+            localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(cloudConfig));
+          } catch {
+            // ignore
+          }
+        }
+      },
+      () => {
+        setIsCloudSynced(false);
+      }
+    );
+
+    return () => {
+      unsubAuth();
+      unsubFirestore();
+    };
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -95,15 +138,27 @@ export default function App() {
   };
 
   const handleTriggerApkDownload = () => {
-    setSiteConfig((prev) => {
-      const updated = { ...prev, downloadCount: prev.downloadCount + 1 };
-      try {
-        localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(updated));
-      } catch {
-        // ignore
+    const resolvedUrl = buildCloudflareR2DownloadUrl(
+      siteConfig.r2BucketPublicDomain || '',
+      siteConfig.r2ObjectKey || '',
+      siteConfig.apkDownloadUrl
+    );
+
+    if (isConfiguredApkUrl(resolvedUrl)) {
+      const previousCount = siteConfig.downloadCount;
+      setSiteConfig((prev) => {
+        const updated = { ...prev, downloadCount: prev.downloadCount + 1 };
+        try {
+          localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
+      if (firestoreDocExists) {
+        incrementFirestoreDownloadCount(previousCount, true);
       }
-      return updated;
-    });
+    }
     setIsDownloadModalOpen(true);
   };
 
@@ -112,13 +167,6 @@ export default function App() {
     const heroEl = document.getElementById('home');
     if (heroEl) {
       heroEl.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const handleJumpToInstallmentSection = () => {
-    const el = document.getElementById('installment-trial');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -244,11 +292,11 @@ export default function App() {
           className="relative overflow-hidden pt-6 pb-16 md:pt-10 md:pb-24"
         >
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            {/* Hero Workspace Utility Bar: Notice + Theme Switch + Quick Admin Config */}
+            {/* Hero Workspace Utility Bar: Notice + Theme Switch + Admin Panel Button */}
             <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white px-4 py-2.5 text-xs dark:border-slate-800 dark:bg-slate-900">
               <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
                 <strong className="font-bold text-emerald-700 dark:text-emerald-400">
-                  অফিসিয়াল আপডেট:
+                  অফিসিয়াল নোটিশ:
                 </strong>{' '}
                 {siteConfig.noticeText}
               </p>
@@ -275,10 +323,10 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsAdminModalOpen(true)}
-                  className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 transition-colors whitespace-nowrap shrink-0"
+                  className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition-colors whitespace-nowrap shrink-0"
                 >
-                  <Settings className="h-3.5 w-3.5" />
-                  <span>অ্যাডমিন কনফিগ</span>
+                  <Settings className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>অ্যাডমিন প্যানেল</span>
                 </button>
               </div>
             </div>
@@ -327,13 +375,17 @@ export default function App() {
                     </a>
                   </div>
 
-                  {/* Unboxed Clean Metadata Line below button (Zero-Pill Discipline) */}
+                  {/* Unboxed Clean Metadata Line below button */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                     <span className="font-semibold text-slate-900 dark:text-slate-200">
                       ভার্সন: {siteConfig.appVersion}
                     </span>
-                    <span aria-hidden="true">·</span>
-                    <span>ফাইলের সাইজ: {siteConfig.fileSize}</span>
+                    {siteConfig.fileSize && siteConfig.fileSize !== '0 MB' && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span>ফাইলের সাইজ: {siteConfig.fileSize}</span>
+                      </>
+                    )}
                     <span aria-hidden="true">·</span>
                     <span className="flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400">
                       <ShieldCheck className="h-4 w-4" />
@@ -341,7 +393,7 @@ export default function App() {
                     </span>
                     <span aria-hidden="true">·</span>
                     <span>
-                      সরাসরি ডাউনলোড কাউন্টার: {formatBengaliNumber(siteConfig.downloadCount)}+ শিক্ষার্থী
+                      ডাউনলোড কাউন্টার: {formatBengaliNumber(siteConfig.downloadCount)}
                     </span>
                   </div>
                 </div>
@@ -384,67 +436,24 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Right 5 Columns: Interactive Android Phone Mockup */}
+              {/* Right 5 Columns: Android App UI Preview */}
               <div className="lg:col-span-5">
                 <MobileAppMockup
                   activeTab={heroPhoneTab}
                   onTabChange={setHeroPhoneTab}
                   onTriggerApkDownload={handleTriggerApkDownload}
+                  appName={siteConfig.appName}
                   appVersion={siteConfig.appVersion}
                 />
-              </div>
-            </div>
-
-            {/* Full-Width 4-Column Proof & Status Strip Below Hero Split */}
-            <div className="mt-14 grid grid-cols-2 gap-4 rounded-3xl border border-slate-200 bg-white p-6 sm:grid-cols-4 dark:border-slate-800 dark:bg-slate-900">
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">সরাসরি APK ডাউনলোড</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-                  {formatBengaliNumber(siteConfig.downloadCount)}+
-                </p>
-                <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-400">
-                  সক্রিয় শিক্ষার্থী ব্যবহার করছেন
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">কেনার আগে যাচাই</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-                  ৩ দিন ফ্রি ট্রায়াল
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  সব কোর্সে ফ্রি ডেমো লেসন
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">কিস্তিতে ভর্তি সুবিধা</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-                  ২ বা ৩ কিস্তি
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  বিকাশ ও নগদ পেমেন্ট সাপোর্ট
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">অ্যাপের নিরাপত্তা</p>
-                <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  ১০০% নিরাপদ
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  Play Protect Friendly APK
-                </p>
               </div>
             </div>
           </div>
         </section>
 
         {/* SECTION খ: 6-STEP VISUAL GUIDE */}
-        <StepByStepGuide
-          onTriggerApkDownload={handleTriggerApkDownload}
-          onJumpToHeroPhoneTab={handleJumpToHeroPhoneTab}
-          onJumpToInstallmentSection={handleJumpToInstallmentSection}
-        />
+        <StepByStepGuide onTriggerApkDownload={handleTriggerApkDownload} />
 
-        {/* SECTION গ: PREMIUM FEATURES & INSTALLMENT PLANNER */}
+        {/* SECTION গ: PREMIUM FEATURES & INSTALLMENT GUIDELINE */}
         <FeaturesAndInstallmentSection
           onTriggerApkDownload={handleTriggerApkDownload}
           onJumpToHeroPhoneTab={handleJumpToHeroPhoneTab}
@@ -465,7 +474,7 @@ export default function App() {
       </main>
 
       {/* QUIET FOOTER WITH SITE LINKS & ADMIN CONFIG TRIGGER */}
-      <footer className="border-t border-slate-200 bg-white py-12 dark:border-slate-800 dark:bg-slate-950">
+      <footer className="border-t border-slate-200 bg-white pt-12 pb-20 sm:pb-12 dark:border-slate-800 dark:bg-slate-950">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
             <div>
@@ -473,7 +482,9 @@ export default function App() {
                 {siteConfig.appName} — অফিসিয়াল ওয়েবসাইট ও অ্যাপ ডাউনলোড পোর্টাল
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                ভার্সন: {siteConfig.appVersion} · ফাইল সাইজ: {siteConfig.fileSize} · সর্বশেষ আপডেট: {siteConfig.lastUpdated}
+                ভার্সন: {siteConfig.appVersion}
+                {siteConfig.fileSize && siteConfig.fileSize !== '0 MB' ? ` · ফাইল সাইজ: ${siteConfig.fileSize}` : ''}
+                {' · '}সর্বশেষ আপডেট: {siteConfig.lastUpdated}
               </p>
             </div>
 
@@ -496,7 +507,7 @@ export default function App() {
                 className="flex items-center gap-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white whitespace-nowrap shrink-0"
               >
                 <Settings className="h-3.5 w-3.5" />
-                <span>অ্যাডমিন প্যানেল (siteConfig)</span>
+                <span>অ্যাডমিন প্যানেল</span>
               </button>
             </div>
           </div>
@@ -515,16 +526,15 @@ export default function App() {
         </div>
       </footer>
 
-      {/* FLOATING TELEGRAM SUPPORT BUTTON (Bottom-Right, compact for 15% sticky budget) */}
-      <div className="fixed bottom-4 right-4 z-40">
+      {/* FLOATING TELEGRAM SUPPORT BUTTON */}
+      <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-40">
         <a
           href={siteConfig.telegramUrl}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Telegram সাপোর্ট ${siteConfig.telegramHandle}`}
-          className="flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2.5 text-xs font-bold text-slate-950 shadow-lg hover:bg-sky-400 transition-transform hover:scale-105 whitespace-nowrap shrink-0"
+          className="flex items-center gap-2 rounded-full bg-sky-500 px-3.5 py-2 sm:px-4 sm:py-2.5 text-[11px] sm:text-xs font-bold text-slate-950 shadow-lg hover:bg-sky-400 transition-transform hover:scale-105 whitespace-nowrap shrink-0"
         >
-          <MessageCircle className="h-4 w-4 fill-current" />
+          <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />
           <span>Telegram সাপোর্ট ({siteConfig.telegramHandle})</span>
         </a>
       </div>
@@ -534,6 +544,7 @@ export default function App() {
         isOpen={isDownloadModalOpen}
         onClose={() => setIsDownloadModalOpen(false)}
         config={siteConfig}
+        onOpenAdminModal={() => setIsAdminModalOpen(true)}
       />
 
       <AdminSettingsModal
@@ -542,6 +553,9 @@ export default function App() {
         config={siteConfig}
         onSaveConfig={handleSaveConfig}
         onResetConfig={handleResetConfig}
+        currentUser={currentUser}
+        firestoreDocExists={firestoreDocExists}
+        isCloudSynced={isCloudSynced}
       />
     </div>
   );

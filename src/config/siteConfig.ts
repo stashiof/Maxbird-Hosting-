@@ -1,117 +1,94 @@
 export interface SiteConfig {
   appName: string;
   apkDownloadUrl: string;
+  r2BucketPublicDomain: string;
+  r2ObjectKey: string;
   appVersion: string;
   fileSize: string;
   telegramHandle: string;
   telegramUrl: string;
   noticeText: string;
+  releaseNotes: string;
   downloadCount: number;
   minAndroidVersion: string;
   lastUpdated: string;
   sha256Short: string;
-  bkashMerchantInfo: string;
-  nagadMerchantInfo: string;
 }
 
 export const defaultSiteConfig: SiteConfig = {
   appName: 'স্মার্ট শিক্ষা',
-  apkDownloadUrl: '#direct-apk-download',
-  appVersion: 'v2.5.0 Latest',
-  fileSize: '28.4 MB',
+  apkDownloadUrl: 'https://your-r2-domain.r2.dev/app.apk',
+  r2BucketPublicDomain: '',
+  r2ObjectKey: '',
+  appVersion: 'v1.0.0',
+  fileSize: '0 MB',
   telegramHandle: '@Fahim_Miya_F',
   telegramUrl: 'https://t.me/Fahim_Miya_F',
-  noticeText: 'নতুন ব্যাচে ভর্তি চলছে! যেকোনো কোর্সে কেনার আগে ৩ দিনের ফ্রি ট্রায়াল এবং ২ বা ৩ কিস্তিতে ফি পরিশোধের সুবিধা চালু আছে।',
-  downloadCount: 14820,
+  noticeText: 'আমাদের অফিসিয়াল অ্যান্ড্রয়েড অ্যাপ ডাউনলোড পোর্টালে স্বাগতম। যেকোনো কোর্সে কেনার আগে ফ্রি ট্রায়াল এবং সহজ কিস্তিতে ভর্তির সুবিধা রয়েছে।',
+  releaseNotes: '',
+  downloadCount: 0,
   minAndroidVersion: 'Android 7.0+',
   lastUpdated: 'অক্টোবর ২০২৬',
-  sha256Short: '8f4b...e92a (Play Protect Verified)',
-  bkashMerchantInfo: 'বিকাশ পেমেন্ট / সেন্ড মানি (অ্যাপের ভেতরে নম্বর দেওয়া আছে)',
-  nagadMerchantInfo: 'নগদ পেমেন্ট / সেন্ড মানি (অ্যাপের ভেতরে নম্বর দেওয়া আছে)',
+  sha256Short: 'Play Protect Verified',
 };
 
 export const ADMIN_DEFAULT_PIN = '1234';
+export const ADMIN_OWNER_EMAIL = 'maiafahim1234@gmail.com';
 
-export interface CoursePreviewItem {
-  id: string;
-  title: string;
-  category: string;
-  classLevel: string;
-  totalClasses: number;
-  totalNotes: number;
-  questChapters: number;
-  fullPrice: number;
-  trialDays: number;
-  freeTrialLessons: number;
-  highlightFeature: string;
-  chapters: {
-    id: string;
-    title: string;
-    duration: string;
-    isFreeTrial: boolean;
-    questStatus: 'completed' | 'unlocked' | 'locked';
-  }[];
+export function isConfiguredApkUrl(url: string): boolean {
+  const clean = url.trim();
+  if (!clean) return false;
+  if (clean === '#direct-apk-download') return false;
+  if (clean === 'https://your-r2-domain.r2.dev/app.apk') return false;
+  if (clean.includes('pub-smart-shiksha.r2.dev')) return false;
+  return /^https?:\/\//i.test(clean);
 }
 
-export const sampleCourses: CoursePreviewItem[] = [
-  {
-    id: 'hsc-science-master',
-    title: 'এইচএসসি বিজ্ঞান — পূর্ণাঙ্গ একাডেমিক ও অ্যাডমিশন ফাউন্ডেশন',
-    category: 'বিজ্ঞান বিভাগ',
-    classLevel: 'HSC ২৫ ও ২৬ ব্যাচ',
-    totalClasses: 145,
-    totalNotes: 90,
-    questChapters: 24,
-    fullPrice: 3000,
-    trialDays: 3,
-    freeTrialLessons: 6,
-    highlightFeature: 'পদার্থ, রসায়ন, উচ্চতর গণিত ও জীববিজ্ঞান — অ্যানিমেটেড লেসন ও কুয়েস্ট ম্যাপসহ',
-    chapters: [
-      { id: 'c1', title: 'অধ্যায় ১: ভেক্টর ও ত্রিমাত্রিক স্থানাঙ্ক (ফ্রি ট্রায়াল)', duration: '৪৮ মিনিট', isFreeTrial: true, questStatus: 'completed' },
-      { id: 'c2', title: 'অধ্যায় ২: গতিবিদ্যা ও প্রাসের সমীকরণ (ফ্রি ট্রায়াল)', duration: '৫৫ মিনিট', isFreeTrial: true, questStatus: 'unlocked' },
-      { id: 'c3', title: 'অধ্যায় ৩: নিউটনিয়ান বলবিদ্যা ও সংঘর্ষ', duration: '৬২ মিনিট', isFreeTrial: false, questStatus: 'locked' },
-      { id: 'c4', title: 'অধ্যায় ৪: কাজ, শক্তি ও ক্ষমতা — কুয়েস্ট চ্যালেঞ্জ', duration: '৫০ মিনিট', isFreeTrial: false, questStatus: 'locked' },
-    ],
-  },
-  {
-    id: 'ssc-complete-prep',
-    title: 'এসএসসি পদার্থ, রসায়ন ও সাধারণ গণিত — স্পেশাল ক্র্যাশ ও মাস্টার কোর্স',
-    category: 'মাধ্যমিক (SSC)',
-    classLevel: 'নবম ও দশম শ্রেণি',
-    totalClasses: 110,
-    totalNotes: 75,
-    questChapters: 18,
-    fullPrice: 2100,
-    trialDays: 3,
-    freeTrialLessons: 5,
-    highlightFeature: 'অধ্যায়ভিত্তিক বোর্ড প্রশ্ন সমাধান, মডেল টেস্ট ও অফলাইন ভিডিও ডাউনলোড',
-    chapters: [
-      { id: 's1', title: 'অধ্যায় ১: ভৌত রাশি এবং পরিমাপ (ফ্রি ট্রায়াল)', duration: '৪২ মিনিট', isFreeTrial: true, questStatus: 'completed' },
-      { id: 's2', title: 'অধ্যায় ২: গতি ও লেখচিত্র বিশ্লেষণ (ফ্রি ট্রায়াল)', duration: '৪৯ মিনিট', isFreeTrial: true, questStatus: 'unlocked' },
-      { id: 's3', title: 'অধ্যায় ৩: বল ও ঘর্ষণ বলের গাণিতিক সমস্যা', duration: '৫৪ মিনিট', isFreeTrial: false, questStatus: 'locked' },
-      { id: 's4', title: 'অধ্যায় ৪: রাসায়নিক বন্ধন ও পর্যায় সারণি', duration: '৫৮ মিনিট', isFreeTrial: false, questStatus: 'locked' },
-    ],
-  },
-  {
-    id: 'english-ict-skill',
-    title: 'ইংরেজি গ্রামার ও আইসিটি (HTML, C Programming & Number System)',
-    category: 'সবার জন্য আবশ্যিক',
-    classLevel: 'SSC ও HSC শিক্ষার্থী',
-    totalClasses: 85,
-    totalNotes: 60,
-    questChapters: 15,
-    fullPrice: 1500,
-    trialDays: 3,
-    freeTrialLessons: 4,
-    highlightFeature: 'সহজ বাংলায় কোডিং ল্যাব, গ্রামার রুলস এবং পিডিএফ স্মার্ট নোটস',
-    chapters: [
-      { id: 'e1', title: 'লেসন ১: সংখ্যা পদ্ধতি ও বাইনারি রূপান্তর (ফ্রি ট্রায়াল)', duration: '৩৮ মিনিট', isFreeTrial: true, questStatus: 'completed' },
-      { id: 'e2', title: 'লেসন ২: ডিজিটাল ডিভাইস ও লজিক গেট (ফ্রি ট্রায়াল)', duration: '৪৫ মিনিট', isFreeTrial: true, questStatus: 'unlocked' },
-      { id: 'e3', title: 'লেসন ৩: ওয়েব ডিজাইন ও HTML ট্যাগ প্র্যাকটিস', duration: '৫২ মিনিট', isFreeTrial: false, questStatus: 'locked' },
-      { id: 'e4', title: 'লেসন ৪: C Programming — লুপ ও কন্ডিশন কুয়েস্ট', duration: '৬০ মিনিট', isFreeTrial: false, questStatus: 'locked' },
-    ],
-  },
-];
+export function buildCloudflareR2DownloadUrl(
+  bucketDomain: string,
+  objectKey: string,
+  fallbackUrl: string = ''
+): string {
+  const cleanDomain = bucketDomain.trim().replace(/\/+$/, '');
+  const cleanKey = objectKey.trim().replace(/^\/+/, '');
+  if (cleanDomain && cleanKey) {
+    const withProtocol = /^https?:\/\//i.test(cleanDomain)
+      ? cleanDomain
+      : `https://${cleanDomain}`;
+    return `${withProtocol}/${cleanKey}`;
+  }
+  return fallbackUrl.trim();
+}
+
+export function formatFileSizeMegabytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 MB';
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(1)} MB`;
+}
+
+export function sanitizeSiteConfigForFirestore(config: SiteConfig): SiteConfig {
+  const resolvedUrl = buildCloudflareR2DownloadUrl(
+    config.r2BucketPublicDomain || '',
+    config.r2ObjectKey || '',
+    config.apkDownloadUrl
+  );
+  return {
+    appName: (config.appName || defaultSiteConfig.appName).trim().slice(0, 100),
+    apkDownloadUrl: (resolvedUrl || defaultSiteConfig.apkDownloadUrl).trim().slice(0, 1000),
+    r2BucketPublicDomain: (config.r2BucketPublicDomain || '').trim().slice(0, 500),
+    r2ObjectKey: (config.r2ObjectKey || '').trim().slice(0, 300),
+    appVersion: (config.appVersion || defaultSiteConfig.appVersion).trim().slice(0, 60),
+    fileSize: (config.fileSize || defaultSiteConfig.fileSize).trim().slice(0, 40),
+    telegramHandle: (config.telegramHandle || defaultSiteConfig.telegramHandle).trim().slice(0, 80),
+    telegramUrl: (config.telegramUrl || defaultSiteConfig.telegramUrl).trim().slice(0, 300),
+    noticeText: (config.noticeText || defaultSiteConfig.noticeText).trim().slice(0, 500),
+    releaseNotes: (config.releaseNotes || '').trim().slice(0, 1000),
+    downloadCount: Math.max(0, Math.min(100000000, Math.round(Number(config.downloadCount) || 0))),
+    minAndroidVersion: (config.minAndroidVersion || defaultSiteConfig.minAndroidVersion).trim().slice(0, 50),
+    lastUpdated: (config.lastUpdated || defaultSiteConfig.lastUpdated).trim().slice(0, 60),
+    sha256Short: (config.sha256Short || defaultSiteConfig.sha256Short).trim().slice(0, 150),
+  };
+}
 
 export interface UsageStep {
   stepNumber: string;
@@ -119,7 +96,7 @@ export interface UsageStep {
   title: string;
   subtitle: string;
   description: string;
-  actionButtonText: string;
+  highlightPoint: string;
   safetyNote?: string;
   screenStateKey: 'download' | 'device_access' | 'otp_login' | 'course_request' | 'free_trial' | 'installment_pay';
 }
@@ -131,7 +108,7 @@ export const usageSteps: UsageStep[] = [
     title: 'অ্যাপ ডাউনলোড ও ইনস্টল',
     subtitle: 'ওয়েবসাইট থেকে সরাসরি APK ফাইল নামান',
     description: 'ওয়েবসাইটের ডাউনলোড বাটন থেকে APK নামিয়ে ফোনে ইনস্টল করুন। কোনো আলাদা অ্যাপ স্টোর একাউন্টের প্রয়োজন নেই।',
-    actionButtonText: '📥 অফিসিয়াল অ্যাপ ডাউনলোড করুন (APK)',
+    highlightPoint: 'সরাসরি ওয়েবসাইট থেকে অফিশিয়াল APK ডাউনলোড ও ইনস্টল।',
     screenStateKey: 'download',
   },
   {
@@ -140,7 +117,7 @@ export const usageSteps: UsageStep[] = [
     title: 'এক ক্লিকে অ্যাপ অ্যাক্সেস আবেদন (কোনো কোড কপি-পেস্টের ঝামেলা নেই!)',
     subtitle: 'নাম ও মোবাইল নম্বর দিয়ে সরাসরি রিকোয়েস্ট পাঠান',
     description: 'অ্যাপ ওপেন করে আপনার নাম ও মোবাইল নম্বর দিয়ে "অ্যাক্সেসের জন্য আবেদন করুন" বাটনে ক্লিক করুন। সাথে সাথে অ্যাডমিনের কাছে রিকোয়েস্ট চলে যাবে এবং অ্যাডমিন এপ্রুভ করলেই আপনার ফোনে অ্যাপ আনলক হয়ে যাবে!',
-    actionButtonText: 'অ্যাক্সেসের জন্য আবেদন করুন',
+    highlightPoint: 'কোনো ডিভাইস কোড কপি-পেস্ট করতে হয় না—এক ক্লিকেই রিকোয়েস্ট চলে যায়।',
     safetyNote: 'বিশেষ নোট: এটি শুধুমাত্র অ্যাপের নিরাপত্তার জন্য, আপনার ফোনের কোনো ব্যক্তিগত তথ্যের ক্ষতি করবে না—১০০% নিরাপদ।',
     screenStateKey: 'device_access',
   },
@@ -150,7 +127,7 @@ export const usageSteps: UsageStep[] = [
     title: 'মোবাইল নম্বর ও OTP দিয়ে লগইন/নতুন একাউন্ট',
     subtitle: '৪ সংখ্যার ওটিপি কোড দিয়ে দ্রুত রেজিস্ট্রেশন',
     description: 'আপনার মোবাইল নম্বর দিলে ফোনে ৪ সংখ্যার OTP যাবে। OTP বসিয়ে নিজের নাম, ক্লাস ও পাসওয়ার্ড সেট করে একাউন্ট খুলে ফেলুন।',
-    actionButtonText: 'OTP যাচাই ও একাউন্ট তৈরি করুন',
+    highlightPoint: 'মোবাইল নম্বর ও ৪ সংখ্যার OTP দিয়ে নিরাপদ একাউন্ট তৈরি।',
     screenStateKey: 'otp_login',
   },
   {
@@ -159,7 +136,7 @@ export const usageSteps: UsageStep[] = [
     title: 'পছন্দের কোর্স দেখুন ও এক্সেস নিন',
     subtitle: 'কোর্সের ব্যানার দেখে এক্সেস রিকোয়েস্ট কনফার্ম করুন',
     description: 'অ্যাপের ভেতরে সব কোর্সের পরিষ্কার ব্যানার ও নাম দেখতে পাবেন। আপনার পছন্দের কোর্সের নিচে "কোর্সে এক্সেস পান" বাটনে ক্লিক করে "হ্যাঁ, আমি এক্সেস নিতে চাই" কনফার্ম করুন।',
-    actionButtonText: 'হ্যাঁ, আমি এক্সেস নিতে চাই',
+    highlightPoint: '"কোর্সে এক্সেস পান" → "হ্যাঁ, আমি এক্সেস নিতে চাই" কনফার্মেশন।',
     screenStateKey: 'course_request',
   },
   {
@@ -168,7 +145,7 @@ export const usageSteps: UsageStep[] = [
     title: 'কেনার আগে ফ্রি ট্রায়াল (Free Trial) দেখুন',
     subtitle: 'ভর্তি হওয়ার আগেই ক্লাস করে মান যাচাই করুন',
     description: 'অ্যাডমিন এক্সেস অনুমোদন করলে আপনি কোর্সের নির্ধারিত মূল্য, কিস্তির প্ল্যান এবং "🎁 ফ্রি ট্রায়াল শুরু করুন" অপশন পাবেন! কেনার আগেই ফ্রিতে ক্লাস করে যাচাই করে নিতে পারবেন।',
-    actionButtonText: '🎁 ফ্রি ট্রায়াল শুরু করুন',
+    highlightPoint: 'কোর্স কেনার আগেই ফ্রি ক্লাস ও নোট দেখে যাচাই করার সুবিধা।',
     screenStateKey: 'free_trial',
   },
   {
@@ -177,7 +154,7 @@ export const usageSteps: UsageStep[] = [
     title: 'এককালীন বা সহজ কিস্তিতে ভর্তি',
     subtitle: 'বিকাশ বা নগদে ১, ২ বা ৩ কিস্তিতে পেমেন্ট সুবিধা',
     description: 'ফ্রি ট্রায়াল শেষে বা যেকোনো সময় বিকাশ (bKash) বা নগদ (Nagad) এর মাধ্যমে এককালীন অথবা ২/৩ কিস্তিতে (Installments) পেমেন্ট করে TrxID জমা দিন। অ্যাডমিন এপ্রুভ করলেই কোর্স আনলক হয়ে যাবে!',
-    actionButtonText: 'TrxID জমা দিয়ে কোর্স আনলক করুন',
+    highlightPoint: 'বিকাশ বা নগদে এককালীন অথবা ২/৩ কিস্তিতে পেমেন্ট ও TrxID সাবমিশন।',
     screenStateKey: 'installment_pay',
   },
 ];
@@ -228,102 +205,6 @@ export const faqItems: FaqItem[] = [
   },
 ];
 
-export interface InstallmentBreakdown {
-  installmentCount: 1 | 2 | 3;
-  totalAmount: number;
-  perInstallmentAmount: number;
-  firstPaymentNow: number;
-  remainingBalance: number;
-  schedule: {
-    installmentNo: number;
-    label: string;
-    amount: number;
-    dueTimeline: string;
-  }[];
-}
-
-export function calculateInstallmentPlan(
-  fullPrice: number,
-  installmentCount: 1 | 2 | 3
-): InstallmentBreakdown {
-  const safePrice = Math.max(0, Math.round(fullPrice));
-  if (installmentCount === 1) {
-    return {
-      installmentCount: 1,
-      totalAmount: safePrice,
-      perInstallmentAmount: safePrice,
-      firstPaymentNow: safePrice,
-      remainingBalance: 0,
-      schedule: [
-        {
-          installmentNo: 1,
-          label: 'এককালীন সম্পূর্ণ পেমেন্ট',
-          amount: safePrice,
-          dueTimeline: 'ভর্তির সময় (কোনো বকেয়া নেই)',
-        },
-      ],
-    };
-  }
-
-  if (installmentCount === 2) {
-    const first = Math.ceil(safePrice / 2);
-    const second = safePrice - first;
-    return {
-      installmentCount: 2,
-      totalAmount: safePrice,
-      perInstallmentAmount: first,
-      firstPaymentNow: first,
-      remainingBalance: second,
-      schedule: [
-        {
-          installmentNo: 1,
-          label: '১ম কিস্তি (কোর্স আনলক)',
-          amount: first,
-          dueTimeline: 'ভর্তির সময় পরিশোধযোগ্য',
-        },
-        {
-          installmentNo: 2,
-          label: '২য় কিস্তি (চূড়ান্ত কিস্তি)',
-          amount: second,
-          dueTimeline: 'ভর্তির ৩০ দিন পর',
-        },
-      ],
-    };
-  }
-
-  const first = Math.ceil(safePrice / 3);
-  const second = Math.ceil((safePrice - first) / 2);
-  const third = safePrice - first - second;
-
-  return {
-    installmentCount: 3,
-    totalAmount: safePrice,
-    perInstallmentAmount: first,
-    firstPaymentNow: first,
-    remainingBalance: safePrice - first,
-    schedule: [
-      {
-        installmentNo: 1,
-        label: '১ম কিস্তি (কোর্স আনলক)',
-        amount: first,
-        dueTimeline: 'ভর্তির সময় পরিশোধযোগ্য',
-      },
-      {
-        installmentNo: 2,
-        label: '২য় কিস্তি',
-        amount: second,
-        dueTimeline: 'ভর্তির ২৫ দিন পর',
-      },
-      {
-        installmentNo: 3,
-        label: '৩য় কিস্তি (চূড়ান্ত কিস্তি)',
-        amount: third,
-        dueTimeline: 'ভর্তির ৫০ দিন পর',
-      },
-    ],
-  };
-}
-
 const BENGALI_DIGITS = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
 
 export function formatBengaliNumber(num: number): string {
@@ -344,9 +225,6 @@ export function validateConfigUpdate(partial: Partial<SiteConfig>): {
   }
   if (partial.fileSize !== undefined && partial.fileSize.trim().length === 0) {
     return { valid: false, error: 'ফাইলের সাইজ খালি রাখা যাবে না।' };
-  }
-  if (partial.apkDownloadUrl !== undefined && partial.apkDownloadUrl.trim().length === 0) {
-    return { valid: false, error: 'ডাউনলোড লিংক খালি রাখা যাবে না।' };
   }
   if (partial.telegramHandle !== undefined && partial.telegramHandle.trim().length === 0) {
     return { valid: false, error: 'টেলিগ্রাম ইউজারনেম খালি রাখা যাবে না।' };

@@ -1,0 +1,159 @@
+{
+  "entities": {
+    "PortalSettings": {
+      "title": "PortalSettings",
+      "description": "Live configuration for the APK download portal and Cloudflare R2 APK file link.",
+      "type": "object",
+      "properties": {
+        "appName": {
+          "type": "string",
+          "description": "Name of the educational Android application.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "apkDownloadUrl": {
+          "type": "string",
+          "description": "Direct APK download URL hosted on Cloudflare R2.",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "r2BucketPublicDomain": {
+          "type": "string",
+          "description": "Cloudflare R2 public bucket domain or custom domain.",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "r2ObjectKey": {
+          "type": "string",
+          "description": "Cloudflare R2 object key path for the APK file.",
+          "minLength": 0,
+          "maxLength": 300
+        },
+        "appVersion": {
+          "type": "string",
+          "description": "Current APK version string.",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "fileSize": {
+          "type": "string",
+          "description": "APK file size label.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "telegramHandle": {
+          "type": "string",
+          "description": "Official Telegram support handle.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "telegramUrl": {
+          "type": "string",
+          "description": "Official Telegram support URL.",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "noticeText": {
+          "type": "string",
+          "description": "Live announcement banner text displayed on the homepage.",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "releaseNotes": {
+          "type": "string",
+          "description": "What is new in the latest APK update.",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "downloadCount": {
+          "type": "number",
+          "description": "Total APK download counter."
+        },
+        "minAndroidVersion": {
+          "type": "string",
+          "description": "Minimum supported Android OS version.",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "Human-readable last update date in Bengali.",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "sha256Short": {
+          "type": "string",
+          "description": "SHA-256 verification summary.",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the admin who owns/updated the document.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when settings were first initialized."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when settings were last updated."
+        }
+      },
+      "required": [
+        "appName",
+        "apkDownloadUrl",
+        "r2BucketPublicDomain",
+        "r2ObjectKey",
+        "appVersion",
+        "fileSize",
+        "telegramHandle",
+        "telegramUrl",
+        "noticeText",
+        "releaseNotes",
+        "downloadCount",
+        "minAndroidVersion",
+        "lastUpdated",
+        "sha256Short",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Trusted admin registry document.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Admin user UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp."
+        }
+      },
+      "required": ["uid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/portal_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/PortalSettings" },
+      "description": "Singleton portal configuration document ('main') storing Cloudflare R2 APK link, version, notice, and download count."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Trusted admin user lookup collection."
+    }
+  }
+}

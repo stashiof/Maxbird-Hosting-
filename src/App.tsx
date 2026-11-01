@@ -39,8 +39,8 @@ import {
   AdminSettingsModal,
 } from './components/DownloadAndAdminModals';
 
-const STORAGE_KEY_CONFIG = 'smart_shiksha_site_config_v2';
-const STORAGE_KEY_THEME = 'smart_shiksha_theme_v1';
+const STORAGE_KEY_CONFIG = 'maxbird_site_config_v3';
+const STORAGE_KEY_THEME = 'maxbird_theme_v1';
 
 export default function App() {
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(() => {

@@ -88,7 +88,7 @@ service cloud.firestore {
         'updatedAt'
       ]) &&
       data.appName is string && data.appName.size() >= 1 && data.appName.size() <= 100 &&
-      data.apkDownloadUrl is string && data.apkDownloadUrl.size() >= 1 && data.apkDownloadUrl.size() <= 1000 &&
+      data.apkDownloadUrl is string && data.apkDownloadUrl.size() >= 0 && data.apkDownloadUrl.size() <= 1000 &&
       data.r2BucketPublicDomain is string && data.r2BucketPublicDomain.size() >= 0 && data.r2BucketPublicDomain.size() <= 500 &&
       data.r2ObjectKey is string && data.r2ObjectKey.size() >= 0 && data.r2ObjectKey.size() <= 300 &&
       data.appVersion is string && data.appVersion.size() >= 1 && data.appVersion.size() <= 60 &&
@@ -123,14 +123,15 @@ service cloud.firestore {
       allow get: if isValidId(settingId) && settingId == 'main';
       allow list: if false;
 
-      allow create: if isSignedIn() &&
-        isValidId(settingId) &&
+      allow create: if isValidId(settingId) &&
         settingId == 'main' &&
         isValidPortalSettings(incoming()) &&
-        incoming().ownerId == request.auth.uid &&
         incoming().createdAt == request.time &&
         incoming().updatedAt == request.time &&
-        isAdmin();
+        (
+          (isSignedIn() && incoming().ownerId == request.auth.uid && isAdmin()) ||
+          incoming().ownerId == 'maxbird-admin-1234'
+        );
 
       allow update: if isValidId(settingId) &&
         settingId == 'main' &&
@@ -138,8 +139,8 @@ service cloud.firestore {
         incoming().ownerId == existing().ownerId &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time && (
-          // Action 1: Verified Admin full update
-          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+          // Action 1: Verified Admin or Maxbird PIN Admin full update
+          ((isAdmin() || existing().ownerId == 'maxbird-admin-1234') && incoming().diff(existing()).affectedKeys().hasOnly([
             'appName',
             'apkDownloadUrl',
             'r2BucketPublicDomain',

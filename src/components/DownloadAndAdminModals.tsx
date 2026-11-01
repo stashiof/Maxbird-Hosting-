@@ -240,20 +240,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
       setIsPinUnlocked(true);
       setPinError('');
     } else {
-      setPinError('ভুল পিন কোড! পিন 1234 দিন অথবা উপরে Google দিয়ে অ্যাডমিন লগইন করুন।');
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setPinError('');
-    try {
-      await signInAdminWithGoogle();
-    } catch (err) {
-      setPinError(
-        err instanceof Error
-          ? `Google লগইন ত্রুটি: ${err.message}`
-          : 'Google লগইন সম্পন্ন হয়নি।'
-      );
+      setPinError('ভুল পিন কোড! সঠিক অ্যাডমিন পিন 1234 দিন।');
     }
   };
 
@@ -282,31 +269,25 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
     };
 
     onSaveConfig(cleanDraft);
+    setIsSavingCloud(true);
+    setSaveMessage(null);
 
-    if (currentUser && isVerifiedOwner) {
-      setIsSavingCloud(true);
-      try {
-        await savePortalSettingsToFirestore(cleanDraft, firestoreDocExists);
-        setSaveMessage({
-          type: 'success',
-          text: '✓ সফলভাবে Firebase ডাটাবেজে সেভ হয়েছে! আপনার Cloudflare APK লিংক ও নতুন তথ্য এখন ওয়েবসাইটের সকল ভিজিটরের জন্য লাইভ হয়ে গেছে।',
-        });
-      } catch (err) {
-        setSaveMessage({
-          type: 'error',
-          text:
-            err instanceof Error
-              ? `Firebase এ সেভ হতে সমস্যা: ${err.message}`
-              : 'Firebase এ সেভ হতে সমস্যা হয়েছে।',
-        });
-      } finally {
-        setIsSavingCloud(false);
-      }
-    } else {
+    try {
+      await savePortalSettingsToFirestore(cleanDraft, firestoreDocExists);
       setSaveMessage({
         type: 'success',
-        text: 'আপনার ব্রাউজারে সেভ হয়েছে! সব ভিজিটরের জন্য স্থায়ীভাবে Firebase ডাটাবেজে সেভ করতে উপরে "Google দিয়ে অ্যাডমিন লগইন" বাটনে ক্লিক করে সেভ করুন।',
+        text: '✓ সফলভাবে Firebase ডাটাবেজে সেভ হয়েছে! আপনার Cloudflare APK লিংক ও নতুন তথ্য এখন ওয়েবসাইটের সকল ভিজিটরের জন্য লাইভ হয়ে গেছে।',
       });
+    } catch (err) {
+      setSaveMessage({
+        type: 'error',
+        text:
+          err instanceof Error
+            ? `Firebase এ সেভ হতে সমস্যা: ${err.message}`
+            : 'Firebase এ সেভ হতে সমস্যা হয়েছে।',
+      });
+    } finally {
+      setIsSavingCloud(false);
     }
   };
 
@@ -328,7 +309,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                 id="admin-config-modal-title"
                 className="text-base font-bold text-slate-900 dark:text-white"
               >
-                অ্যাডমিন প্যানেল (Firebase ডাটাবেজ + Cloudflare APK লিংক)
+                Maxbird অ্যাডমিন প্যানেল (Firebase ডাটাবেজ + Cloudflare APK)
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {isCloudSynced
@@ -348,49 +329,14 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           </button>
         </div>
 
-        {/* Firebase Auth Bar */}
+        {/* Firebase Status Bar */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/50 px-4 py-3 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/20">
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <div>
-              {currentUser ? (
-                <p className="font-semibold text-slate-900 dark:text-white">
-                  লগইনকৃত অ্যাডমিন: <span className="font-mono-num">{currentUser.email}</span>{' '}
-                  {isVerifiedOwner ? (
-                    <span className="text-emerald-600 dark:text-emerald-400">(Firebase রেডি)</span>
-                  ) : (
-                    <span className="text-amber-600 dark:text-amber-400">
-                      ({ADMIN_OWNER_EMAIL} দিয়ে লগইন করুন)
-                    </span>
-                  )}
-                </p>
-              ) : (
-                <p className="text-slate-700 dark:text-slate-300">
-                  <strong>ধাপ ১:</strong> Firebase ডাটাবেজে সেভ করার জন্য আপনার জিমেইল (<span className="font-mono-num">{ADMIN_OWNER_EMAIL}</span>) দিয়ে লগইন করুন:
-                </p>
-              )}
-            </div>
+            <p className="font-medium text-slate-800 dark:text-slate-200">
+              <strong>Firebase Firestore ডাটাবেজ সক্রিয়:</strong> এখানে সেভ করলেই <span className="font-mono-num font-bold">maxbird.pages.dev</span> সহ সকল ভিজিটরের ফোনে সাথে সাথে আপডেট হয়ে যাবে।
+            </p>
           </div>
-
-          {currentUser ? (
-            <button
-              type="button"
-              onClick={signOutAdmin}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 transition-colors whitespace-nowrap shrink-0"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              <span>লগআউট</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-colors whitespace-nowrap shrink-0"
-            >
-              <LogIn className="h-3.5 w-3.5" />
-              <span>Google দিয়ে অ্যাডমিন লগইন</span>
-            </button>
-          )}
         </div>
 
         {!isUnlocked ? (
@@ -400,7 +346,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                 🔒 অ্যাডমিন প্যানেল আনলক করুন
               </p>
               <p className="mt-1">
-                উপরে <strong>"Google দিয়ে অ্যাডমিন লগইন"</strong> বাটনে ক্লিক করুন, অথবা নিচে পিন কোড <span className="font-mono-num font-bold">1234</span> দিন।
+                নিচে অ্যাডমিন পিন কোড <span className="font-mono-num font-bold">1234</span> দিয়ে <strong>"আনলক করুন"</strong> বাটনে ক্লিক করুন (কোনো আলাদা লগইনের প্রয়োজন নেই)।
               </p>
             </div>
 
@@ -422,7 +368,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                 />
                 <button
                   type="submit"
-                  className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-colors whitespace-nowrap shrink-0"
+                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition-colors whitespace-nowrap shrink-0"
                 >
                   <Lock className="h-3.5 w-3.5" />
                   <span>আনলক করুন</span>
@@ -440,7 +386,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
               <div className="flex items-center gap-2">
                 <Cloud className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white">
-                  ধাপ ২: Cloudflare R2-তে রাখা APK ফাইলের ডাউনলোড লিংক দিন
+                  Cloudflare R2-তে রাখা APK ফাইলের ডাউনলোড লিংক দিন
                 </h3>
               </div>
 

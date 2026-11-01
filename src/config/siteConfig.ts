@@ -16,7 +16,7 @@ export interface SiteConfig {
 }
 
 export const defaultSiteConfig: SiteConfig = {
-  appName: 'স্মার্ট শিক্ষা',
+  appName: 'Maxbird',
   apkDownloadUrl: '',
   r2BucketPublicDomain: '',
   r2ObjectKey: '',
@@ -24,7 +24,7 @@ export const defaultSiteConfig: SiteConfig = {
   fileSize: '0 MB',
   telegramHandle: '@Fahim_Miya_F',
   telegramUrl: 'https://t.me/Fahim_Miya_F',
-  noticeText: 'আমাদের অফিসিয়াল অ্যান্ড্রয়েড অ্যাপ ডাউনলোড পোর্টালে স্বাগতম। যেকোনো কোর্সে কেনার আগে ফ্রি ট্রায়াল এবং সহজ কিস্তিতে ভর্তির সুবিধা রয়েছে।',
+  noticeText: 'Maxbird অফিসিয়াল অ্যান্ড্রয়েড অ্যাপ ডাউনলোড পোর্টালে স্বাগতম। যেকোনো কোর্সে কেনার আগে ফ্রি ট্রায়াল এবং সহজ কিস্তিতে ভর্তির সুবিধা রয়েছে।',
   releaseNotes: '',
   downloadCount: 0,
   minAndroidVersion: 'Android 7.0+',

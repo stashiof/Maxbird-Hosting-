@@ -123,15 +123,14 @@ service cloud.firestore {
       allow get: if isValidId(settingId) && settingId == 'main';
       allow list: if false;
 
-      allow create: if isValidId(settingId) &&
+      allow create: if isSignedIn() &&
+        isValidId(settingId) &&
         settingId == 'main' &&
+        isAdmin() &&
         isValidPortalSettings(incoming()) &&
+        incoming().ownerId == request.auth.uid &&
         incoming().createdAt == request.time &&
-        incoming().updatedAt == request.time &&
-        (
-          (isSignedIn() && incoming().ownerId == request.auth.uid && isAdmin()) ||
-          incoming().ownerId == 'maxbird-admin-1234'
-        );
+        incoming().updatedAt == request.time;
 
       allow update: if isValidId(settingId) &&
         settingId == 'main' &&
@@ -139,8 +138,8 @@ service cloud.firestore {
         incoming().ownerId == existing().ownerId &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time && (
-          // Action 1: Verified Admin or Maxbird PIN Admin full update
-          ((isAdmin() || existing().ownerId == 'maxbird-admin-1234') && incoming().diff(existing()).affectedKeys().hasOnly([
+          // Action 1: Verified Admin full update
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
             'appName',
             'apkDownloadUrl',
             'r2BucketPublicDomain',

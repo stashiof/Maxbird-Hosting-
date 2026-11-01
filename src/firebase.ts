@@ -182,7 +182,9 @@ export async function savePortalSettingsToFirestore(
   docExists: boolean
 ): Promise<void> {
   const user = auth.currentUser;
-  const resolvedOwnerId = user?.uid || 'maxbird-admin-1234';
+  if (!user) {
+    throw new Error('অ্যাডমিন সেটিংস সেভ করার জন্য Google দিয়ে লগইন করা আবশ্যক।');
+  }
 
   const clean = sanitizeSiteConfigForFirestore(config);
   const docRef = doc(db, 'portal_settings', 'main');
@@ -204,7 +206,7 @@ export async function savePortalSettingsToFirestore(
         minAndroidVersion: clean.minAndroidVersion,
         lastUpdated: clean.lastUpdated,
         sha256Short: clean.sha256Short,
-        ownerId: resolvedOwnerId,
+        ownerId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });

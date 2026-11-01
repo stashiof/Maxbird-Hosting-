@@ -89,10 +89,11 @@ function evaluatePortalWrite(
 
   if (op === 'create') {
     if (
+      auth &&
+      isBootstrappedAdmin(auth) &&
+      incoming.ownerId === auth.uid &&
       incoming.createdAt === VALID_TIMESTAMP &&
-      incoming.updatedAt === VALID_TIMESTAMP &&
-      ((auth && isBootstrappedAdmin(auth) && incoming.ownerId === auth.uid) ||
-        incoming.ownerId === 'maxbird-admin-1234')
+      incoming.updatedAt === VALID_TIMESTAMP
     ) {
       return 'ALLOWED';
     }
@@ -105,7 +106,7 @@ function evaluatePortalWrite(
   if (incoming.updatedAt !== VALID_TIMESTAMP) return 'PERMISSION_DENIED';
 
   const changedKeys = Object.keys(incoming).filter((k) => incoming[k] !== existing[k]);
-  if (isBootstrappedAdmin(auth) || existing.ownerId === 'maxbird-admin-1234') {
+  if (isBootstrappedAdmin(auth)) {
     return 'ALLOWED';
   }
 
@@ -265,7 +266,7 @@ test('Legitimate Admin create/update and Public +1 downloadCount increment succe
       null,
       { ...baseValidDoc, ownerId: 'maxbird-admin-1234', apkDownloadUrl: '' }
     ),
-    'ALLOWED'
+    'PERMISSION_DENIED'
   );
   assert.equal(
     evaluatePortalWrite(

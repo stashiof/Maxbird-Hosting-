@@ -13,8 +13,8 @@ import {
   Database,
   LogIn,
   LogOut,
-  Upload,
   AlertCircle,
+  Link as LinkIcon,
 } from 'lucide-react';
 import {
   SiteConfig,
@@ -22,7 +22,6 @@ import {
   verifyAdminPin,
   validateConfigUpdate,
   formatBengaliNumber,
-  buildCloudflareR2DownloadUrl,
   isConfiguredApkUrl,
   formatFileSizeMegabytes,
   ADMIN_OWNER_EMAIL,
@@ -49,12 +48,8 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const resolvedR2Url = buildCloudflareR2DownloadUrl(
-    config.r2BucketPublicDomain || '',
-    config.r2ObjectKey || '',
-    config.apkDownloadUrl
-  );
-  const hasRealApk = isConfiguredApkUrl(resolvedR2Url);
+  const cleanApkUrl = (config.apkDownloadUrl || '').trim();
+  const hasRealApk = isConfiguredApkUrl(cleanApkUrl);
 
   return (
     <div
@@ -79,7 +74,8 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 ভার্সন: {config.appVersion}
                 {config.fileSize && config.fileSize !== '0 MB' ? ` · সাইজ: ${config.fileSize}` : ''}
-                {' · '}{config.minAndroidVersion}
+                {' · '}
+                {config.minAndroidVersion}
               </p>
             </div>
           </div>
@@ -122,7 +118,7 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({
               <div>
                 <p className="font-bold">এখনো কোনো APK ডাউনলোড লিংক যুক্ত করা হয়নি</p>
                 <p className="mt-1 leading-relaxed">
-                  অ্যাডমিন প্যানেল থেকে আপনার Cloudflare R2-এর `.apk` ফাইল বা ডাউনলোড লিংক সেভ করলেই এখানে সরাসরি ডাউনলোড চালু হয়ে যাবে।
+                  অ্যাডমিন প্যানেলে গিয়ে আপনার Cloudflare R2-এর `.apk` ডাউনলোড লিংক পেস্ট করে Firebase-এ সেভ করলেই এখানে সরাসরি ডাউনলোড চালু হয়ে যাবে।
                 </p>
               </div>
             </div>
@@ -152,7 +148,7 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({
         <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
           {hasRealApk ? (
             <a
-              href={resolvedR2Url}
+              href={cleanApkUrl}
               download
               target="_blank"
               rel="noopener noreferrer"
@@ -174,7 +170,7 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white hover:bg-emerald-500 transition-colors whitespace-nowrap shrink-0"
             >
               <Settings className="h-4 w-4" />
-              <span>অ্যাডমিন প্যানেলে গিয়ে APK যুক্ত করুন</span>
+              <span>অ্যাডমিন প্যানেলে APK লিংক যুক্ত করুন</span>
             </button>
           )}
 
@@ -204,8 +200,6 @@ interface AdminSettingsModalProps {
   isCloudSynced: boolean;
 }
 
-const STORAGE_KEY_WORKER_SECRET = 'smart_shiksha_r2_worker_secret';
-
 export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   isOpen,
   onClose,
@@ -220,21 +214,6 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [isSavingCloud, setIsSavingCloud] = useState(false);
-
-  // Direct Cloudflare Worker R2 File Upload state
-  const [selectedApkFile, setSelectedApkFile] = useState<File | null>(null);
-  const [workerSecretKey, setWorkerSecretKey] = useState<string>(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY_WORKER_SECRET) || '';
-    } catch {
-      return '';
-    }
-  });
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [uploadStatusMsg, setUploadStatusMsg] = useState<{
-    type: 'success' | 'error';
-    text: string;
-  } | null>(null);
 
   const [draft, setDraft] = useState<SiteConfig>(config);
   const [saveMessage, setSaveMessage] = useState<{
@@ -251,7 +230,6 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
   useEffect(() => {
     setDraft(config);
     setSaveMessage(null);
-    setUploadStatusMsg(null);
   }, [config, isOpen]);
 
   if (!isOpen) return null;
@@ -279,120 +257,14 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
     }
   };
 
-  const handleR2FieldChange = (newDomain: string, newKey: string) => {
-    const autoBuiltUrl = buildCloudflareR2DownloadUrl(
-      newDomain,
-      newKey,
-      draft.apkDownloadUrl
-    );
-    setDraft({
-      ...draft,
-      r2BucketPublicDomain: newDomain,
-      r2ObjectKey: newKey,
-      apkDownloadUrl: autoBuiltUrl,
-    });
-  };
-
-  const handleApkFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMeasureApkSize = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setSelectedApkFile(file);
     const detectedSize = formatFileSizeMegabytes(file.size);
-    const cleanFileName = file.name.replace(/\s+/g, '-');
-    const objectKey = `releases/${cleanFileName}`;
-    const autoUrl = buildCloudflareR2DownloadUrl(
-      draft.r2BucketPublicDomain,
-      objectKey,
-      draft.apkDownloadUrl
-    );
     setDraft((prev) => ({
       ...prev,
       fileSize: detectedSize,
-      r2ObjectKey: objectKey,
-      apkDownloadUrl: autoUrl,
     }));
-    setUploadStatusMsg({
-      type: 'success',
-      text: `"${file.name}" সিলেক্ট করা হয়েছে (সাইজ: ${detectedSize})।`,
-    });
-  };
-
-  const handleDirectUploadToCloudflareR2 = () => {
-    if (!selectedApkFile) {
-      setUploadStatusMsg({
-        type: 'error',
-        text: 'অনুগ্রহ করে প্রথমে আপনার ফোন বা পিসি থেকে একটি .apk ফাইল সিলেক্ট করুন।',
-      });
-      return;
-    }
-    const cleanDomain = draft.r2BucketPublicDomain.trim().replace(/\/+$/, '');
-    if (!cleanDomain) {
-      setUploadStatusMsg({
-        type: 'error',
-        text: 'সরাসরি আপলোডের জন্য নিচে আপনার Cloudflare Worker URL (যেমন: https://your-worker.workers.dev) লিখুন।',
-      });
-      return;
-    }
-
-    const objectKey =
-      draft.r2ObjectKey.trim().replace(/^\/+/, '') ||
-      `releases/${selectedApkFile.name.replace(/\s+/g, '-')}`;
-    const targetUrl = `${
-      /^https?:\/\//i.test(cleanDomain) ? cleanDomain : `https://${cleanDomain}`
-    }/${objectKey}`;
-
-    try {
-      localStorage.setItem(STORAGE_KEY_WORKER_SECRET, workerSecretKey);
-    } catch {
-      // ignore
-    }
-
-    setUploadProgress(0);
-    setUploadStatusMsg(null);
-
-    const xhr = new XMLHttpRequest();
-    xhr.open('PUT', targetUrl, true);
-    xhr.setRequestHeader('Content-Type', 'application/vnd.android.package-archive');
-    if (workerSecretKey.trim()) {
-      xhr.setRequestHeader('X-Custom-Auth-Key', workerSecretKey.trim());
-    }
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) {
-        const pct = Math.round((event.loaded / event.total) * 100);
-        setUploadProgress(pct);
-      }
-    };
-
-    xhr.onload = () => {
-      setUploadProgress(null);
-      if (xhr.status >= 200 && xhr.status < 300) {
-        setDraft((prev) => ({
-          ...prev,
-          apkDownloadUrl: targetUrl,
-          r2ObjectKey: objectKey,
-        }));
-        setUploadStatusMsg({
-          type: 'success',
-          text: `✓ সফলভাবে Cloudflare R2-তে আপলোড হয়েছে! ডাউনলোড লিংক: ${targetUrl}। এবার নিচে "পরিবর্তন সেভ করুন" বাটনে ক্লিক করুন।`,
-        });
-      } else {
-        setUploadStatusMsg({
-          type: 'error',
-          text: `আপলোড ব্যর্থ হয়েছে (Status ${xhr.status}): ${xhr.responseText || 'Worker Secret Key বা URL চেক করুন।'}`,
-        });
-      }
-    };
-
-    xhr.onerror = () => {
-      setUploadProgress(null);
-      setUploadStatusMsg({
-        type: 'error',
-        text: 'নেটওয়ার্ক বা CORS ত্রুটির কারণে Cloudflare Worker-এ কানেক্ট করা যায়নি। Worker URL টি সঠিক কি না যাচাই করুন।',
-      });
-    };
-
-    xhr.send(selectedApkFile);
   };
 
   const handleSaveSubmit = async (e: React.FormEvent) => {
@@ -403,15 +275,21 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
       return;
     }
 
-    onSaveConfig(draft);
+    const cleanDraft: SiteConfig = {
+      ...draft,
+      r2BucketPublicDomain: '',
+      r2ObjectKey: '',
+    };
+
+    onSaveConfig(cleanDraft);
 
     if (currentUser && isVerifiedOwner) {
       setIsSavingCloud(true);
       try {
-        await savePortalSettingsToFirestore(draft, firestoreDocExists);
+        await savePortalSettingsToFirestore(cleanDraft, firestoreDocExists);
         setSaveMessage({
           type: 'success',
-          text: '✓ Firebase Firestore ডাটাবেজে সফলভাবে সেভ হয়েছে! এখন ওয়েবসাইটের সকল ভিজিটর সাথে সাথে এই নতুন আপডেট ও APK লিংক দেখতে পাবে।',
+          text: '✓ সফলভাবে Firebase ডাটাবেজে সেভ হয়েছে! আপনার Cloudflare APK লিংক ও নতুন তথ্য এখন ওয়েবসাইটের সকল ভিজিটরের জন্য লাইভ হয়ে গেছে।',
         });
       } catch (err) {
         setSaveMessage({
@@ -427,7 +305,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
     } else {
       setSaveMessage({
         type: 'success',
-        text: 'আপনার ব্রাউজারে সেভ হয়েছে! সব ভিজিটরের জন্য Firebase ডাটাবেজে স্থায়ীভাবে লাইভ করতে উপরে "Google দিয়ে অ্যাডমিন লগইন" করে সেভ করুন।',
+        text: 'আপনার ব্রাউজারে সেভ হয়েছে! সব ভিজিটরের জন্য স্থায়ীভাবে Firebase ডাটাবেজে সেভ করতে উপরে "Google দিয়ে অ্যাডমিন লগইন" বাটনে ক্লিক করে সেভ করুন।',
       });
     }
   };
@@ -450,12 +328,12 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                 id="admin-config-modal-title"
                 className="text-base font-bold text-slate-900 dark:text-white"
               >
-                অ্যাডমিন প্যানেল — ওয়েবসাইট ও APK রিলিজ কন্ট্রোলার
+                অ্যাডমিন প্যানেল (Firebase ডাটাবেজ + Cloudflare APK লিংক)
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {isCloudSynced
-                  ? '✓ Firebase Firestore লাইভ ডাটাবেজের সাথে সংযুক্ত'
-                  : 'Firebase Firestore + Cloudflare R2 কন্ট্রোল প্যানেল'}
+                  ? '✓ Firebase ডাটাবেজ স্বয়ংক্রিয়ভাবে কানেক্টেড আছে'
+                  : 'Cloudflare-এ APK রেখে তার লিংক এখানে সেভ করুন'}
               </p>
             </div>
           </div>
@@ -471,7 +349,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
         </div>
 
         {/* Firebase Auth Bar */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs dark:border-slate-800 dark:bg-slate-950">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/50 px-4 py-3 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/20">
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <div>
@@ -479,7 +357,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                 <p className="font-semibold text-slate-900 dark:text-white">
                   লগইনকৃত অ্যাডমিন: <span className="font-mono-num">{currentUser.email}</span>{' '}
                   {isVerifiedOwner ? (
-                    <span className="text-emerald-600 dark:text-emerald-400">(ভেরিফাইড)</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">(Firebase রেডি)</span>
                   ) : (
                     <span className="text-amber-600 dark:text-amber-400">
                       ({ADMIN_OWNER_EMAIL} দিয়ে লগইন করুন)
@@ -487,8 +365,8 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                   )}
                 </p>
               ) : (
-                <p className="text-slate-600 dark:text-slate-300">
-                  সব শিক্ষার্থীর জন্য স্থায়ীভাবে Firebase ডাটাবেজে আপডেট সেভ করতে Google দিয়ে লগইন করুন।
+                <p className="text-slate-700 dark:text-slate-300">
+                  <strong>ধাপ ১:</strong> Firebase ডাটাবেজে সেভ করার জন্য আপনার জিমেইল (<span className="font-mono-num">{ADMIN_OWNER_EMAIL}</span>) দিয়ে লগইন করুন:
                 </p>
               )}
             </div>
@@ -519,10 +397,10 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           <form onSubmit={handlePinSubmit} className="mt-5 space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
               <p className="font-semibold text-slate-900 dark:text-white">
-                🔒 অ্যাডমিন সিকিউরিটি চেক
+                🔒 অ্যাডমিন প্যানেল আনলক করুন
               </p>
               <p className="mt-1">
-                উপরে <strong>"Google দিয়ে অ্যাডমিন লগইন"</strong> বাটনে ক্লিক করুন ({ADMIN_OWNER_EMAIL}), অথবা নিচে অ্যাডমিন পিন দিন।
+                উপরে <strong>"Google দিয়ে অ্যাডমিন লগইন"</strong> বাটনে ক্লিক করুন, অথবা নিচে পিন কোড <span className="font-mono-num font-bold">1234</span> দিন।
               </p>
             </div>
 
@@ -539,7 +417,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                   type="password"
                   value={pinInput}
                   onChange={(e) => setPinInput(e.target.value)}
-                  placeholder="পিন লিখুন"
+                  placeholder="পিন লিখুন (1234)"
                   className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-mono-num text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white"
                 />
                 <button
@@ -557,154 +435,49 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
           </form>
         ) : (
           <form onSubmit={handleSaveSubmit} className="mt-5 space-y-4">
-            {/* CLOUDFLARE R2 DIRECT UPLOAD & URL CONFIG */}
+            {/* SINGLE CLEAN BOX FOR CLOUDFLARE R2 APK LINK */}
             <div className="rounded-2xl border border-sky-200 bg-sky-50/50 p-4 dark:border-sky-900/60 dark:bg-sky-950/20 space-y-3">
               <div className="flex items-center gap-2">
                 <Cloud className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white">
-                  Cloudflare R2 সরাসরি APK আপলোডার ও ডাউনলোড লিংক
+                  ধাপ ২: Cloudflare R2-তে রাখা APK ফাইলের ডাউনলোড লিংক দিন
                 </h3>
               </div>
 
-              {/* File Picker + Direct Worker Upload */}
-              <div className="rounded-xl border border-sky-200/80 bg-white p-3.5 dark:border-sky-800/60 dark:bg-slate-950 space-y-3">
-                <div>
-                  <label
-                    htmlFor="apk-file-picker"
-                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                  >
-                    ১. আপনার ডিভাইস থেকে নতুন `.apk` ফাইল সিলেক্ট করুন (অটো সাইজ ও নাম ডিটেক্ট হবে):
-                  </label>
-                  <input
-                    id="apk-file-picker"
-                    type="file"
-                    accept=".apk,application/vnd.android.package-archive"
-                    onChange={handleApkFileSelect}
-                    className="mt-1.5 block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-emerald-500 dark:text-slate-300"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor="cfg-r2-domain"
-                      className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                    >
-                      Cloudflare Worker / R2 Public Domain
-                    </label>
-                    <input
-                      id="cfg-r2-domain"
-                      type="text"
-                      value={draft.r2BucketPublicDomain}
-                      onChange={(e) =>
-                        handleR2FieldChange(e.target.value, draft.r2ObjectKey)
-                      }
-                      placeholder="https://your-worker.workers.dev"
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono-num text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="cfg-worker-secret"
-                      className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                    >
-                      Worker Secret Key (আপলোডের জন্য)
-                    </label>
-                    <input
-                      id="cfg-worker-secret"
-                      type="password"
-                      value={workerSecretKey}
-                      onChange={(e) => setWorkerSecretKey(e.target.value)}
-                      placeholder="MY_SUPER_SECRET_ADMIN_KEY_2026"
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono-num text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={handleDirectUploadToCloudflareR2}
-                    disabled={uploadProgress !== null}
-                    className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-500 disabled:opacity-50 transition-colors whitespace-nowrap shrink-0"
-                  >
-                    <Upload className="h-3.5 w-3.5" />
-                    <span>
-                      {uploadProgress !== null
-                        ? `আপলোড হচ্ছে (${uploadProgress}%)...`
-                        : 'Cloudflare R2-তে সরাসরি APK আপলোড করুন'}
-                    </span>
-                  </button>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    অথবা নিচে সরাসরি R2 ডাউনলোড লিংক পেস্ট করুন
-                  </span>
-                </div>
-
-                {uploadProgress !== null && (
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                    <div
-                      className="h-full rounded-full bg-sky-500 transition-all"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                )}
-
-                {uploadStatusMsg && (
-                  <p
-                    className={`text-xs ${
-                      uploadStatusMsg.type === 'success'
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-rose-600 dark:text-rose-400'
-                    }`}
-                  >
-                    {uploadStatusMsg.text}
-                  </p>
-                )}
+              <div className="rounded-xl border border-sky-200/80 bg-white p-3 text-xs text-slate-600 dark:border-sky-800/60 dark:bg-slate-950 dark:text-slate-300 space-y-1 leading-relaxed">
+                <p>
+                  <strong>১.</strong> Cloudflare-এর <strong>R2 Object Storage</strong>-এ একটি বাকেট খুলে আপনার <code className="font-mono-num">.apk</code> ফাইলটি Upload করুন।
+                </p>
+                <p>
+                  <strong>২.</strong> বাকেটের Settings থেকে <strong>Public Development URL (r2.dev)</strong> চালু করে ফাইলটির পাবলিক লিংক কপি করুন।
+                </p>
+                <p>
+                  <strong>৩.</strong> সেই লিংকটি নিচের বক্সে পেস্ট করে নিচে <strong>"Firebase ডাটাবেজে সেভ করুন"</strong> বাটনে চাপুন!
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="cfg-r2-key"
-                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                  >
-                    APK ফাইলের পাথ (R2 Object Key)
-                  </label>
-                  <input
-                    id="cfg-r2-key"
-                    type="text"
-                    value={draft.r2ObjectKey}
-                    onChange={(e) =>
-                      handleR2FieldChange(draft.r2BucketPublicDomain, e.target.value)
-                    }
-                    placeholder="releases/app-v1.0.apk"
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono-num text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="cfg-apk-url"
-                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-                  >
-                    চূড়ান্ত সরাসরি APK ডাউনলোড লিংক
-                  </label>
-                  <input
-                    id="cfg-apk-url"
-                    type="text"
-                    value={draft.apkDownloadUrl}
-                    onChange={(e) =>
-                      setDraft({ ...draft, apkDownloadUrl: e.target.value })
-                    }
-                    placeholder="https://pub-xxxx.r2.dev/releases/app.apk"
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono-num text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white"
-                  />
-                </div>
+              <div>
+                <label
+                  htmlFor="cfg-apk-url"
+                  className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200"
+                >
+                  <LinkIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Cloudflare R2-এর সরাসরি APK ডাউনলোড লিংক:</span>
+                </label>
+                <input
+                  id="cfg-apk-url"
+                  type="text"
+                  value={draft.apkDownloadUrl}
+                  onChange={(e) =>
+                    setDraft({ ...draft, apkDownloadUrl: e.target.value })
+                  }
+                  placeholder="https://pub-xxxxxxxxxxxx.r2.dev/my-app.apk"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-mono-num text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
               </div>
             </div>
 
-            {/* APP INFO & VERSION */}
+            {/* APP INFO SAVED IN FIREBASE */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
               <div>
                 <label
@@ -743,7 +516,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                   htmlFor="cfg-size"
                   className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                 >
-                  ফাইলের সাইজ
+                  ফাইলের সাইজ (যেমন: 28 MB)
                 </label>
                 <input
                   id="cfg-size"
@@ -752,6 +525,15 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                   onChange={(e) => setDraft({ ...draft, fileSize: e.target.value })}
                   className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white"
                 />
+                <label className="mt-1 inline-block cursor-pointer text-[11px] font-medium text-emerald-600 hover:underline dark:text-emerald-400">
+                  <span>ফাইল থেকে সাইজ মাপুন</span>
+                  <input
+                    type="file"
+                    accept=".apk"
+                    onChange={handleMeasureApkSize}
+                    className="hidden"
+                  />
+                </label>
               </div>
 
               <div>
@@ -900,9 +682,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                 <span>
                   {isSavingCloud
                     ? 'Firebase এ সেভ হচ্ছে...'
-                    : isVerifiedOwner
-                    ? 'পরিবর্তন সেভ করুন (Firebase Live)'
-                    : 'পরিবর্তন সেভ করুন'}
+                    : 'Firebase ডাটাবেজে সেভ করুন'}
                 </span>
               </button>
             </div>

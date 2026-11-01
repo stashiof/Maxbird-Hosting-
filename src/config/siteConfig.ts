@@ -17,7 +17,7 @@ export interface SiteConfig {
 
 export const defaultSiteConfig: SiteConfig = {
   appName: 'স্মার্ট শিক্ষা',
-  apkDownloadUrl: 'https://your-r2-domain.r2.dev/app.apk',
+  apkDownloadUrl: '',
   r2BucketPublicDomain: '',
   r2ObjectKey: '',
   appVersion: 'v1.0.0',
@@ -89,6 +89,252 @@ export function sanitizeSiteConfigForFirestore(config: SiteConfig): SiteConfig {
     sha256Short: (config.sha256Short || defaultSiteConfig.sha256Short).trim().slice(0, 150),
   };
 }
+
+export function normalizeWorkerBaseUrl(url: string): string {
+  const clean = url.trim().replace(/\/+$/, '');
+  if (!clean) return '';
+  if (clean.includes('your-portal-worker.workers.dev') || clean.includes('your-r2-domain.r2.dev')) {
+    return '';
+  }
+  return /^https?:\/\//i.test(clean) ? clean : `https://${clean}`;
+}
+
+export function buildWorkerApiEndpoints(workerBaseUrl: string) {
+  const base = normalizeWorkerBaseUrl(workerBaseUrl);
+  return {
+    base,
+    configUrl: base ? `${base}/api/config` : '',
+    downloadHitUrl: base ? `${base}/api/download-hit` : '',
+    releaseUploadUrl: (objectKey: string) => {
+      const cleanKey = objectKey.trim().replace(/^\/+/, '');
+      return base && cleanKey ? `${base}/${cleanKey}` : '';
+    },
+  };
+}
+
+export async function fetchCloudflarePortalConfig(workerBaseUrl: string): Promise<{
+  ok: boolean;
+  exists: boolean;
+  config?: SiteConfig;
+  error?: string;
+}> {
+  const endpoints = buildWorkerApiEndpoints(workerBaseUrl);
+  if (!endpoints.configUrl) {
+    return { ok: false, exists: false, error: 'Cloudflare Worker URL কনফিগার করা হয়নি।' };
+  }
+  try {
+    const res = await fetch(endpoints.configUrl, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) {
+      return {
+        ok: false,
+        exists: false,
+        error: `Worker রেসপন্স ত্রুটি (HTTP ${res.status})`,
+      };
+    }
+    const data = await res.json();
+    if (data && data.exists && data.config) {
+      const merged = sanitizeSiteConfigForFirestore({
+        ...defaultSiteConfig,
+        ...data.config,
+      });
+      return { ok: true, exists: true, config: merged };
+    }
+    return { ok: true, exists: false };
+  } catch (err) {
+    return {
+      ok: false,
+      exists: false,
+      error:
+        err instanceof Error
+          ? `Cloudflare Worker-এ কানেক্ট করা যায়নি: ${err.message}`
+          : 'Cloudflare Worker-এ কানেক্ট করা যায়নি।',
+    };
+  }
+}
+
+export async function saveCloudflarePortalConfig(
+  workerBaseUrl: string,
+  secretKey: string,
+  config: SiteConfig
+): Promise<{ ok: boolean; config?: SiteConfig; error?: string }> {
+  const endpoints = buildWorkerApiEndpoints(workerBaseUrl);
+  if (!endpoints.configUrl) {
+    return { ok: false, error: 'প্রথমে ধাপ ১-এ আপনার Cloudflare Worker URL যুক্ত করুন।' };
+  }
+  if (!secretKey.trim()) {
+    return { ok: false, error: 'প্রথমে ধাপ ১-এ আপনার Admin Secret Key দিন।' };
+  }
+  const cleanPayload = sanitizeSiteConfigForFirestore(config);
+  try {
+    const res = await fetch(endpoints.configUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Custom-Auth-Key': secretKey.trim(),
+      },
+      body: JSON.stringify(cleanPayload),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      return {
+        ok: false,
+        error: `Cloudflare সেভ ব্যর্থ (HTTP ${res.status}): ${text || 'Secret Key চেক করুন।'}`,
+      };
+    }
+    return { ok: true, config: cleanPayload };
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error
+          ? `Cloudflare নেটওয়ার্ক ত্রুটি: ${err.message}`
+          : 'Cloudflare Worker-এ সেভ করা যায়নি।',
+    };
+  }
+}
+
+export async function incrementCloudflareDownloadCount(
+  workerBaseUrl: string
+): Promise<{ ok: boolean; downloadCount?: number }> {
+  const endpoints = buildWorkerApiEndpoints(workerBaseUrl);
+  if (!endpoints.downloadHitUrl) return { ok: false };
+  try {
+    const res = await fetch(endpoints.downloadHitUrl, { method: 'POST' });
+    if (!res.ok) return { ok: false };
+    const data = await res.json();
+    return {
+      ok: true,
+      downloadCount: typeof data?.downloadCount === 'number' ? data.downloadCount : undefined,
+    };
+  } catch {
+    return { ok: false };
+  }
+}
+
+
+export const CLOUDFLARE_ALL_IN_ONE_WORKER_SCRIPT = `/**
+ * ১০০% ক্লাউডফ্লেয়ার (All-in-One Cloudflare Worker + R2 Database & APK Storage)
+ * ----------------------------------------------------------------------------
+ * সেটআপ নিয়ম (মাত্র ৩টি ধাপ):
+ * ১. Cloudflare Dashboard -> R2 -> একটি বাকেট তৈরি করুন (যেমন: apk-storage)
+ * ২. Workers & Pages -> একটি Worker তৈরি করুন -> Settings -> Bindings এ গিয়ে:
+ *    - R2 Bucket Binding যোগ করুন: Variable name দিন: APK_BUCKET
+ *    - Environment Variable (Secret) যোগ করুন: Variable name দিন: ADMIN_SECRET_KEY (আপনার গোপন পাসওয়ার্ড)
+ * ৩. এই সম্পূর্ণ কোডটি Worker-এ পেস্ট করে Deploy করুন!
+ */
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, HEAD, POST, PUT, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, X-Custom-Auth-Key",
+};
+
+const CONFIG_KEY = "portal-config.json";
+
+export default {
+  async fetch(request, env) {
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/^\\/+/, "");
+
+    // ১. ওয়েবসাইটের লাইভ ডাটাবেজ পড়া (GET /api/config)
+    if (path === "api/config" && request.method === "GET") {
+      const obj = await env.APK_BUCKET.get(CONFIG_KEY);
+      if (!obj) {
+        return new Response(JSON.stringify({ exists: false }), {
+          status: 200,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json", "Cache-Control": "no-store" },
+        });
+      }
+      const data = await obj.json();
+      return new Response(JSON.stringify({ exists: true, config: data }), {
+        status: 200,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json", "Cache-Control": "no-store" },
+      });
+    }
+
+    // ২. অ্যাডমিন প্যানেল থেকে ওয়েবসাইটের ডাটাবেজ সেভ করা (PUT /api/config)
+    if (path === "api/config" && request.method === "PUT") {
+      const authKey = request.headers.get("X-Custom-Auth-Key");
+      if (!env.ADMIN_SECRET_KEY || authKey !== env.ADMIN_SECRET_KEY) {
+        return new Response(JSON.stringify({ error: "Unauthorized: ভুল Admin Secret Key" }), {
+          status: 401,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+      const body = await request.json();
+      await env.APK_BUCKET.put(CONFIG_KEY, JSON.stringify(body), {
+        httpMetadata: { contentType: "application/json" },
+      });
+      return new Response(JSON.stringify({ ok: true, config: body }), {
+        status: 200,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    // ৩. ডাউনলোড কাউন্টার +১ বাড়ানো (POST /api/download-hit)
+    if (path === "api/download-hit" && request.method === "POST") {
+      const obj = await env.APK_BUCKET.get(CONFIG_KEY);
+      let currentConfig = {};
+      if (obj) {
+        currentConfig = await obj.json();
+      }
+      const nextCount = (Number(currentConfig.downloadCount) || 0) + 1;
+      const updated = { ...currentConfig, downloadCount: nextCount };
+      await env.APK_BUCKET.put(CONFIG_KEY, JSON.stringify(updated), {
+        httpMetadata: { contentType: "application/json" },
+      });
+      return new Response(JSON.stringify({ ok: true, downloadCount: nextCount }), {
+        status: 200,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    // ৪. সরাসরি .apk ফাইল R2 বাকেটে আপলোড করা (PUT /releases/filename.apk)
+    if (request.method === "PUT" && path.startsWith("releases/")) {
+      const authKey = request.headers.get("X-Custom-Auth-Key");
+      if (!env.ADMIN_SECRET_KEY || authKey !== env.ADMIN_SECRET_KEY) {
+        return new Response("Unauthorized: ভুল Admin Secret Key", {
+          status: 401,
+          headers: CORS_HEADERS,
+        });
+      }
+      await env.APK_BUCKET.put(path, request.body, {
+        httpMetadata: {
+          contentType: "application/vnd.android.package-archive",
+          contentDisposition: \`attachment; filename="\${path.split("/").pop()}"\`,
+        },
+      });
+      return new Response(
+        JSON.stringify({ ok: true, downloadUrl: \`\${url.origin}/\${path}\` }),
+        { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ৫. শিক্ষার্থীদের জন্য সরাসরি .apk ফাইল ডাউনলোড (GET /releases/filename.apk)
+    if (request.method === "GET" && path.startsWith("releases/")) {
+      const object = await env.APK_BUCKET.get(path);
+      if (!object) {
+        return new Response("APK File Not Found in R2", { status: 404, headers: CORS_HEADERS });
+      }
+      const headers = new Headers(CORS_HEADERS);
+      object.writeHttpMetadata(headers);
+      headers.set("etag", object.httpEtag);
+      headers.set("Content-Type", "application/vnd.android.package-archive");
+      headers.set("Content-Disposition", \`attachment; filename="\${path.split("/").pop()}"\`);
+      return new Response(object.body, { headers });
+    }
+
+    return new Response("Cloudflare Portal Worker Active", { status: 200, headers: CORS_HEADERS });
+  },
+};`;
+
 
 export interface UsageStep {
   stepNumber: string;

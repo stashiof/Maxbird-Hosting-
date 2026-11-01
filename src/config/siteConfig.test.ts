@@ -11,6 +11,9 @@ import {
   isConfiguredApkUrl,
   formatFileSizeMegabytes,
   defaultSiteConfig,
+  normalizeWorkerBaseUrl,
+  buildWorkerApiEndpoints,
+  CLOUDFLARE_ALL_IN_ONE_WORKER_SCRIPT,
 } from './siteConfig';
 
 test('formatBengaliNumber converts English numerals to Bengali numerals with formatting', () => {
@@ -83,3 +86,22 @@ test('sanitizeSiteConfigForFirestore enforces blueprint maxLengths and builds R2
   assert.equal(sanitized.apkDownloadUrl, 'https://pub-abc.r2.dev/v3.0/smart.apk');
   assert.equal(sanitized.noticeText.length, 500);
 });
+
+test('normalizeWorkerBaseUrl and buildWorkerApiEndpoints construct 100% Cloudflare endpoints', () => {
+  assert.equal(normalizeWorkerBaseUrl(''), '');
+  assert.equal(normalizeWorkerBaseUrl('https://your-portal-worker.workers.dev'), '');
+  assert.equal(
+    normalizeWorkerBaseUrl('smart-portal.fahim.workers.dev/'),
+    'https://smart-portal.fahim.workers.dev'
+  );
+
+  const endpoints = buildWorkerApiEndpoints('https://smart-portal.fahim.workers.dev/');
+  assert.equal(endpoints.configUrl, 'https://smart-portal.fahim.workers.dev/api/config');
+  assert.equal(endpoints.downloadHitUrl, 'https://smart-portal.fahim.workers.dev/api/download-hit');
+  assert.equal(
+    endpoints.releaseUploadUrl('/releases/app-v1.apk'),
+    'https://smart-portal.fahim.workers.dev/releases/app-v1.apk'
+  );
+  assert.ok(CLOUDFLARE_ALL_IN_ONE_WORKER_SCRIPT.includes('APK_BUCKET'));
+});
+

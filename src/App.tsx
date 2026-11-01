@@ -20,7 +20,6 @@ import {
   SiteConfig,
   defaultSiteConfig,
   formatBengaliNumber,
-  buildCloudflareR2DownloadUrl,
   isConfiguredApkUrl,
 } from './config/siteConfig';
 import {
@@ -138,13 +137,9 @@ export default function App() {
   };
 
   const handleTriggerApkDownload = () => {
-    const resolvedUrl = buildCloudflareR2DownloadUrl(
-      siteConfig.r2BucketPublicDomain || '',
-      siteConfig.r2ObjectKey || '',
-      siteConfig.apkDownloadUrl
-    );
+    const cleanUrl = (siteConfig.apkDownloadUrl || '').trim();
 
-    if (isConfiguredApkUrl(resolvedUrl)) {
+    if (isConfiguredApkUrl(cleanUrl)) {
       const previousCount = siteConfig.downloadCount;
       setSiteConfig((prev) => {
         const updated = { ...prev, downloadCount: prev.downloadCount + 1 };

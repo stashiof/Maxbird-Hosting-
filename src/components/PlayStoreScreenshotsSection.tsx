@@ -102,120 +102,42 @@ export const PlayStoreScreenshotsSection: React.FC<PlayStoreScreenshotsSectionPr
   return (
     <section
       id="screenshots"
-      className="border-t border-slate-200/80 bg-white py-14 sm:py-20 dark:border-slate-800/80 dark:bg-slate-900/60"
+      className="scroll-mt-16 border-t border-slate-200/80 bg-white py-12 sm:py-16 dark:border-slate-800/80 dark:bg-slate-900/60"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* GOOGLE PLAY STORE STYLE HEADER CARD */}
-        <div className="rounded-3xl border border-slate-200/90 bg-slate-50/70 p-5 sm:p-8 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
-            {/* Left: App Icon + Title + Developer Info */}
-            <div className="flex items-start gap-4 sm:gap-6">
-              {config.appIconUrl && config.appIconUrl.trim() ? (
-                <img
-                  src={config.appIconUrl}
-                  alt={`${config.appName} Icon`}
-                  className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 rounded-3xl border border-slate-200 object-cover shadow-md dark:border-slate-700"
-                />
-              ) : (
-                <div className="flex h-20 w-20 sm:h-24 sm:w-24 shrink-0 flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-lg shadow-emerald-600/25">
-                  <Smartphone className="h-9 w-9 sm:h-10 sm:w-10" />
-                  <span className="mt-1 text-[10px] font-extrabold tracking-wider uppercase">
-                    {config.appName.slice(0, 8)}
-                  </span>
-                </div>
-              )}
-
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-                    {config.appName}
-                  </h2>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Play Protect Verified
-                  </span>
-                </div>
-
-                <p className="mt-1 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                  {config.appName} Official · এডুকেশন ও স্মার্ট লার্নিং অ্যাপ
-                </p>
-
-                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  ভার্সন: <strong className="text-slate-700 dark:text-slate-200">{config.appVersion}</strong>
-                  {' · '}ন্যূনতম প্রয়োজন: <strong className="text-slate-700 dark:text-slate-200">{config.minAndroidVersion}</strong>
-                  {' · '}আপডেট: <strong className="text-slate-700 dark:text-slate-200">{config.lastUpdated}</strong>
-                </p>
-              </div>
-            </div>
-
-            {/* Right: Play Store Style Metrics + Install CTA */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center lg:flex-col lg:items-end">
-              <div className="grid grid-cols-3 divide-x divide-slate-200 rounded-2xl border border-slate-200/80 bg-white px-3 py-2.5 text-center dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-950">
-                <div className="px-3">
-                  <div className="flex items-center justify-center gap-1 text-sm font-bold text-slate-900 dark:text-white">
-                    <span>৪.৯</span>
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  </div>
-                  <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
-                    শিক্ষার্থী রেটিং
-                  </p>
-                </div>
-
-                <div className="px-3">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">
-                    {config.fileSize && config.fileSize !== '0 MB' ? config.fileSize : 'APK'}
-                  </p>
-                  <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
-                    ফাইলের সাইজ
-                  </p>
-                </div>
-
-                <div className="px-3">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">
-                    {formatBengaliNumber(config.downloadCount)}+
-                  </p>
-                  <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
-                    ডাউনলোড
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={onTriggerApkDownload}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-emerald-500 active:scale-[0.99] transition-all sm:w-auto"
-              >
-                <Download className="h-4 w-4" />
-                <span>অ্যাপ ইনস্টল / ডাউনলোড করুন (APK)</span>
-              </button>
-            </div>
+        {/* SCREENSHOTS GALLERY HEADER */}
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              অ্যাপ প্রিভিউ গ্যালারি
+            </p>
+            <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-white">
+              অ্যাপের ভেতরের স্ক্রিনশট ({formatBengaliNumber(totalItems)}টি ছবি)
+            </h2>
+            <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              ডানে-বামে সোয়াইপ করে দেখুন অথবা যেকোনো ছবির ওপর ট্যাপ করে বড় করে দেখুন
+            </p>
           </div>
 
-          {/* SCREENSHOTS GALLERY HEADER */}
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 pt-6 dark:border-slate-800">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 sm:text-lg dark:text-white">
-                অ্যাপের ভেতরের স্ক্রিনশট ও প্রিভিউ (Play Store View)
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                যেকোনো ছবির ওপর ক্লিক করে ফুল-স্ক্রিনে বড় করে দেখতে পারবেন
-              </p>
-            </div>
+          <button
+            type="button"
+            onClick={onTriggerApkDownload}
+            className="hidden sm:inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            <span>অ্যাপ ডাউনলোড করুন</span>
+          </button>
+        </div>
 
-            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-              মোট {formatBengaliNumber(totalItems)}টি স্ক্রিন প্রিভিউ
-            </span>
-          </div>
-
-          {/* HORIZONTAL SCROLLABLE PLAY STORE SCREENSHOT STRIP */}
-          <div className="mt-5 flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory">
+        {/* HORIZONTAL SCROLLABLE PLAY STORE SCREENSHOT STRIP */}
+        <div className="mt-6 flex gap-3.5 sm:gap-4 overflow-x-auto pb-3 pt-1 snap-x snap-mandatory">
             {hasUploadedScreenshots
               ? uploadedScreenshots.map((imgUrl, idx) => (
                   <button
                     key={`${imgUrl}-${idx}`}
                     type="button"
                     onClick={() => setLightboxIndex(idx)}
-                    className="group relative w-[210px] sm:w-[240px] shrink-0 snap-start overflow-hidden rounded-2xl border-2 border-slate-200/90 bg-slate-900 shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-500 hover:shadow-lg dark:border-slate-800"
+                    className="group relative w-[180px] sm:w-[235px] shrink-0 snap-start overflow-hidden rounded-2xl border-2 border-slate-200/90 bg-slate-900 shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-500 hover:shadow-lg dark:border-slate-800"
                   >
                     <div className="aspect-[9/18] w-full overflow-hidden bg-slate-950">
                       <img
@@ -225,11 +147,11 @@ export const PlayStoreScreenshotsSection: React.FC<PlayStoreScreenshotsSectionPr
                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                       />
                     </div>
-                    <div className="absolute inset-0 flex items-end justify-between bg-gradient-to-t from-slate-950/80 via-transparent to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100">
-                      <span className="rounded-lg bg-slate-900/90 px-2.5 py-1 text-[11px] font-bold text-white">
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent p-2.5 sm:p-3">
+                      <span className="rounded-lg bg-slate-900/90 px-2 py-0.5 text-[11px] font-bold text-white">
                         স্ক্রিনশট {formatBengaliNumber(idx + 1)}
                       </span>
-                      <span className="rounded-lg bg-emerald-600 p-1.5 text-white">
+                      <span className="rounded-lg bg-emerald-600 p-1.5 text-white shadow-xs">
                         <Maximize2 className="h-3.5 w-3.5" />
                       </span>
                     </div>
@@ -369,20 +291,6 @@ export const PlayStoreScreenshotsSection: React.FC<PlayStoreScreenshotsSectionPr
                     </div>
                   </button>
                 ))}
-          </div>
-
-          {/* WHAT'S NEW / RELEASE NOTES BAR (Play Store "নতুন কী আছে" Box) */}
-          {config.releaseNotes && config.releaseNotes.trim().length > 0 && (
-            <div className="mt-4 rounded-2xl border border-emerald-200/70 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
-              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                <Sparkles className="h-4 w-4" />
-                <span>নতুন আপডেটে যা থাকছে ({config.appVersion}):</span>
-              </div>
-              <p className="mt-1.5 whitespace-pre-line text-xs leading-relaxed text-slate-700 dark:text-slate-300">
-                {config.releaseNotes}
-              </p>
-            </div>
-          )}
         </div>
       </div>
 

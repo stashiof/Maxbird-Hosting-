@@ -40,61 +40,52 @@ export const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
       className="scroll-mt-20 border-t border-slate-200/80 bg-white py-16 md:py-24 dark:border-slate-800/80 dark:bg-slate-900/40"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl">
+        <div className="max-w-2xl">
           <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-            ধাপে ধাপে ভিজ্যুয়াল গাইড · নতুন শিক্ষার্থীদের জন্য সহজ নির্দেশনা
+            ইনস্টল ও ব্যবহারের গাইড
           </p>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-            অ্যাপটি কীভাবে ব্যবহার করবেন? (৬টি সহজ ধাপে সম্পূর্ণ নিয়ম)
+          <h2 className="mt-1.5 text-xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+            মাত্র ৪টি সহজ ধাপে অ্যাপ ইনস্টল ও ক্লাস শুরু করুন
           </h2>
-          <p className="mt-3 text-base leading-relaxed text-slate-600 dark:text-slate-300">
-            নতুন ব্যবহারকারীরা যেন একটুও বিভ্রান্ত না হন, সেজন্য নিচের ৬টি ধাপে ডাউনলোড থেকে শুরু করে ডিভাইস অ্যাক্সেস, ফ্রি ট্রায়াল এবং কিস্তিতে কোর্স আনলক করার সম্পূর্ণ প্রক্রিয়াটি তুলে ধরা হলো।
-          </p>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {usageSteps.map((step) => (
             <div
               key={step.stepNumber}
-              className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-slate-50/70 p-6 dark:border-slate-800 dark:bg-slate-900/80"
+              className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-slate-50/70 p-5 dark:border-slate-800 dark:bg-slate-900/80"
             >
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                    {step.stepNumber} · {step.bengaliNumber}
+                  <span className="rounded-lg bg-emerald-100/80 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
+                    {step.bengaliNumber}
                   </span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950">
                     {getStepIcon(step.screenStateKey)}
                   </div>
                 </div>
 
-                <h3 className="mt-4 text-lg font-bold leading-snug text-slate-900 dark:text-white">
+                <h3 className="mt-3.5 text-base font-bold leading-snug text-slate-900 dark:text-white">
                   {step.title}
                 </h3>
 
-                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                <p className="mt-2 text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                   {step.description}
                 </p>
-
-                {step.safetyNote && (
-                  <p className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-3 text-xs font-medium leading-relaxed text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200">
-                    🛡️ {step.safetyNote}
-                  </p>
-                )}
               </div>
 
-              <div className="mt-5 border-t border-slate-200/70 pt-4 dark:border-slate-800">
+              <div className="mt-4 border-t border-slate-200/70 pt-3.5 dark:border-slate-800">
                 {step.screenStateKey === 'download' ? (
                   <button
                     type="button"
                     onClick={onTriggerApkDownload}
-                    className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition-colors whitespace-nowrap shrink-0"
+                    className="w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-colors"
                   >
-                    📥 অফিসিয়াল অ্যাপ ডাউনলোড করুন (APK)
+                    📥 অ্যাপ ডাউনলোড করুন (APK)
                   </button>
                 ) : (
-                  <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                     <span>{step.highlightPoint}</span>
                   </div>
                 )}

@@ -39,9 +39,17 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({
       <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white">
-              <Download className="h-6 w-6" />
-            </div>
+            <img
+              src={config.appIconUrl && config.appIconUrl.trim() ? config.appIconUrl : '/logo.png'}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.src.endsWith('/logo.png')) {
+                  target.src = '/logo.png';
+                }
+              }}
+              alt={`${config.appName} লোগো`}
+              className="h-12 w-12 shrink-0 rounded-2xl border border-slate-200 bg-white p-1 object-contain shadow-xs dark:border-slate-700"
+            />
             <div>
               <h2
                 id="apk-download-modal-title"

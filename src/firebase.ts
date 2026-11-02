@@ -158,7 +158,7 @@ export function subscribeToPortalSettings(
           data.minAndroidVersion || defaultSiteConfig.minAndroidVersion,
         lastUpdated: data.lastUpdated || defaultSiteConfig.lastUpdated,
         sha256Short: data.sha256Short || defaultSiteConfig.sha256Short,
-        appIconUrl: data.appIconUrl || '',
+        appIconUrl: data.appIconUrl || defaultSiteConfig.appIconUrl || '/logo.png',
         appScreenshots: sanitizeScreenshotsList(data.appScreenshots),
       };
       onData(

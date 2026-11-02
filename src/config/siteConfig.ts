@@ -83,6 +83,75 @@ export function formatFileSizeMegabytes(bytes: number): string {
   return `${mb.toFixed(1)} MB`;
 }
 
+export function parseFileSizeMegabytes(fileSizeStr: string, fallbackMb: number = 9.6): number {
+  if (!fileSizeStr || typeof fileSizeStr !== 'string') return fallbackMb;
+  const match = fileSizeStr.replace(/,/g, '').match(/(\d+(?:\.\d+)?)/);
+  if (!match) return fallbackMb;
+  const parsed = parseFloat(match[1]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackMb;
+}
+
+export function calculateDownloadProgress(
+  loadedBytes: number,
+  totalBytes: number
+): {
+  percent: number;
+  loadedMb: string;
+  totalMb: string;
+} {
+  const safeTotal = Number.isFinite(totalBytes) && totalBytes > 0 ? totalBytes : 9.6 * 1024 * 1024;
+  const safeLoaded = Math.max(0, Math.min(safeTotal, Number.isFinite(loadedBytes) ? loadedBytes : 0));
+  const percent = Math.min(100, Math.max(0, Math.round((safeLoaded / safeTotal) * 100)));
+  const loadedMb = (safeLoaded / (1024 * 1024)).toFixed(1);
+  const totalMb = (safeTotal / (1024 * 1024)).toFixed(1);
+  return { percent, loadedMb, totalMb };
+}
+
+export function buildApkFileName(appName: string, appVersion: string): string {
+  const cleanName = (appName || 'Maxbird').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'Maxbird';
+  const cleanVer = (appVersion || 'v1.0.7').trim().replace(/[^a-zA-Z0-9._-]/g, '') || 'v1.0.7';
+  return `${cleanName}-${cleanVer}.apk`;
+}
+
+export function buildShareableApkLinks(
+  originOrCurrentUrl: string,
+  config: Pick<SiteConfig, 'appName' | 'appVersion' | 'fileSize' | 'apkDownloadUrl'>
+): {
+  portalDownloadUrl: string;
+  directApkUrl: string;
+  apkFileName: string;
+  shareTitle: string;
+  shareText: string;
+} {
+  let baseOrigin = 'https://maxbird.pages.dev';
+  try {
+    if (originOrCurrentUrl && /^https?:\/\//i.test(originOrCurrentUrl.trim())) {
+      const parsed = new URL(originOrCurrentUrl.trim());
+      baseOrigin = `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}`;
+    }
+  } catch {
+    // fallback to default
+  }
+  const portalDownloadUrl = `${baseOrigin}/?download=1`;
+  const directApkUrl = (config.apkDownloadUrl || '').trim();
+  const apkFileName = buildApkFileName(config.appName, config.appVersion);
+  const shareTitle = `${config.appName} (${config.appVersion}) — অফিসিয়াল অ্যান্ড্রয়েড অ্যাপ`;
+  const shareText = `📲 ${config.appName} অফিসিয়াল অ্যান্ড্রয়েড অ্যাপ (${config.appVersion}${
+    config.fileSize ? ` · ${config.fileSize}` : ''
+  }) ডাউনলোড ও ইনস্টল লিংক:\n🌐 ওয়েবসাইট থেকে সরাসরি ডাউনলোড: ${portalDownloadUrl}${
+    isConfiguredApkUrl(directApkUrl) ? `\n📦 সরাসরি APK ফাইল লিংক: ${directApkUrl}` : ''
+  }`;
+
+  return {
+    portalDownloadUrl,
+    directApkUrl,
+    apkFileName,
+    shareTitle,
+    shareText,
+  };
+}
+
+
 export function sanitizeSiteConfigForFirestore(config: SiteConfig): SiteConfig {
   const resolvedUrl = buildCloudflareR2DownloadUrl(
     config.r2BucketPublicDomain || '',

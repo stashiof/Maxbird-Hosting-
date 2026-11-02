@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import {
   Download,
   ShieldCheck,
@@ -40,27 +41,38 @@ export const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
       className="scroll-mt-20 border-t border-slate-200/80 bg-white py-16 md:py-24 dark:border-slate-800/80 dark:bg-slate-900/40"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.4 }}
+          className="max-w-2xl"
+        >
           <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
             ইনস্টল ও ব্যবহারের গাইড
           </p>
           <h2 className="mt-1.5 text-xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
             মাত্র ৪টি সহজ ধাপে অ্যাপ ইনস্টল ও ক্লাস শুরু করুন
           </h2>
-        </div>
+        </motion.div>
 
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {usageSteps.map((step) => (
-            <div
+          {usageSteps.map((step, index) => (
+            <motion.div
               key={step.stepNumber}
-              className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-slate-50/70 p-5 dark:border-slate-800 dark:bg-slate-900/80"
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.4, delay: index * 0.08 }}
+              whileHover={{ y: -4 }}
+              className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-slate-50/70 p-5 transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900/80"
             >
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded-lg bg-emerald-100/80 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
-                    {step.bengaliNumber}
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                    {step.bengaliNumber} · {step.subtitle}
                   </span>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950">
                     {getStepIcon(step.screenStateKey)}
                   </div>
                 </div>
@@ -79,9 +91,9 @@ export const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
                   <button
                     type="button"
                     onClick={onTriggerApkDownload}
-                    className="w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-colors"
+                    className="w-full rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition-colors cursor-pointer"
                   >
-                    📥 অ্যাপ ডাউনলোড করুন (APK)
+                    ব্রাউজারে অ্যাপ ডাউনলোড ও ইনস্টল করুন
                   </button>
                 ) : (
                   <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
@@ -90,7 +102,7 @@ export const StepByStepGuide: React.FC<StepByStepGuideProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

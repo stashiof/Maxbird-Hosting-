@@ -14,6 +14,10 @@ import {
   normalizeWorkerBaseUrl,
   buildWorkerApiEndpoints,
   CLOUDFLARE_ALL_IN_ONE_WORKER_SCRIPT,
+  parseFileSizeMegabytes,
+  calculateDownloadProgress,
+  buildApkFileName,
+  buildShareableApkLinks,
 } from './siteConfig';
 
 test('formatBengaliNumber converts English numerals to Bengali numerals with formatting', () => {
@@ -104,4 +108,28 @@ test('normalizeWorkerBaseUrl and buildWorkerApiEndpoints construct 100% Cloudfla
   );
   assert.ok(CLOUDFLARE_ALL_IN_ONE_WORKER_SCRIPT.includes('APK_BUCKET'));
 });
+
+test('parseFileSizeMegabytes and calculateDownloadProgress compute accurate progress metrics', () => {
+  assert.equal(parseFileSizeMegabytes('9.6 MB'), 9.6);
+  assert.equal(parseFileSizeMegabytes('invalid', 12.5), 12.5);
+
+  const totalBytes = 10 * 1024 * 1024;
+  const halfProgress = calculateDownloadProgress(5 * 1024 * 1024, totalBytes);
+  assert.equal(halfProgress.percent, 50);
+  assert.equal(halfProgress.loadedMb, '5.0');
+  assert.equal(halfProgress.totalMb, '10.0');
+
+  const fullProgress = calculateDownloadProgress(totalBytes * 2, totalBytes);
+  assert.equal(fullProgress.percent, 100);
+});
+
+test('buildApkFileName and buildShareableApkLinks create valid share URLs and filenames', () => {
+  assert.equal(buildApkFileName('Maxbird', 'v1.0.7'), 'Maxbird-v1.0.7.apk');
+  const share = buildShareableApkLinks('https://maxbird.pages.dev/', defaultSiteConfig);
+  assert.equal(share.portalDownloadUrl, 'https://maxbird.pages.dev/?download=1');
+  assert.equal(share.apkFileName, 'Maxbird-v1.0.7.apk');
+  assert.ok(share.shareText.includes('https://maxbird.pages.dev/?download=1'));
+  assert.ok(share.shareText.includes(defaultSiteConfig.apkDownloadUrl));
+});
+
 

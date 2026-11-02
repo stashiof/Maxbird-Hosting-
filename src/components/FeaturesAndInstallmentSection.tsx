@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import {
   Clapperboard,
   DownloadCloud,
@@ -16,7 +17,7 @@ export const FeaturesAndInstallmentSection: React.FC<FeaturesAndInstallmentSecti
   const features = [
     {
       badge: '০১ · স্মুথ স্ট্রিমিং',
-      title: '🎬 HD রেকর্ডেড ও লাইভ ক্লাস',
+      title: 'HD রেকর্ডেড ও লাইভ ক্লাস',
       description:
         'কম ইন্টারনেট স্পিডেও বাফারিং ছাড়া পরিষ্কার ক্লাস দেখা যায় এবং ভিডিওর স্পিড ও কোয়ালিটি নিয়ন্ত্রণের সুবিধা রয়েছে।',
       footer: 'স্মার্ট ভিডিও প্লেয়ার ও প্রগ্রেস ট্র্যাকিং',
@@ -24,7 +25,7 @@ export const FeaturesAndInstallmentSection: React.FC<FeaturesAndInstallmentSecti
     },
     {
       badge: '০২ · ইন্টারনেট ছাড়া ক্লাস',
-      title: '📥 অফলাইন ডাউনলোড সুবিধা',
+      title: 'অফলাইন ডাউনলোড সুবিধা',
       description:
         'ওয়াইফাই বা ডাটা থাকা অবস্থায় অ্যাপের ভেতরেই ভিডিও ক্লাস ও PDF নোট ডাউনলোড করে পরে ইন্টারনেট ছাড়াই দেখা যায়।',
       footer: 'ভিডিও ও লেকচার শিট উভয়ই সেভ থাকে',
@@ -32,7 +33,7 @@ export const FeaturesAndInstallmentSection: React.FC<FeaturesAndInstallmentSecti
     },
     {
       badge: '০৩ · স্মার্ট প্রস্তুতি',
-      title: '🗺️ কুয়েস্ট ম্যাপ ও মডেল টেস্ট',
+      title: 'কুয়েস্ট ম্যাপ ও মডেল টেস্ট',
       description:
         'অধ্যায়ভিত্তিক কুয়েস্ট ম্যাপ, স্মার্ট পিডিএফ নোট এবং প্রতিটি লেসন শেষে কুইজ দিয়ে নিজের প্রস্তুতি যাচাইয়ের ব্যবস্থা।',
       footer: 'গেমিফাইড অধ্যায়ভিত্তিক লার্নিং সিস্টেম',
@@ -40,7 +41,7 @@ export const FeaturesAndInstallmentSection: React.FC<FeaturesAndInstallmentSecti
     },
     {
       badge: '০৪ · সাশ্রয়ী পেমেন্ট ট্র্যাকার',
-      title: '💳 ইন-অ্যাপ কিস্তি ও ফ্রি ট্রায়াল',
+      title: 'ইন-অ্যাপ কিস্তি ও ফ্রি ট্রায়াল',
       description:
         'ভর্তির আগে ফ্রি ট্রায়াল ক্লাস এবং বিকাশ/নগদে ২ বা ৩ কিস্তিতে ভর্তির পর অ্যাপের ভেতরেই পরবর্তী কিস্তির তারিখ ও হিসাব দেখা যায়।',
       footer: 'কোনো লুকানো চার্জ বা অতিরিক্ত ফি নেই',
@@ -54,7 +55,13 @@ export const FeaturesAndInstallmentSection: React.FC<FeaturesAndInstallmentSecti
       className="scroll-mt-20 border-t border-slate-200/80 bg-slate-50 py-14 sm:py-20 dark:border-slate-800/80 dark:bg-slate-950"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.4 }}
+          className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
+        >
           <div className="max-w-2xl">
             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
               কোর্স ও অ্যাপ সুবিধাসমূহ
@@ -67,17 +74,22 @@ export const FeaturesAndInstallmentSection: React.FC<FeaturesAndInstallmentSecti
           <button
             type="button"
             onClick={onTriggerApkDownload}
-            className="w-full sm:w-auto rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition-colors"
+            className="w-full sm:w-auto rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition-colors cursor-pointer"
           >
-            📥 অফিসিয়াল অ্যাপ ডাউনলোড করুন
+            অফিসিয়াল অ্যাপ ডাউনলোড করুন
           </button>
-        </div>
+        </motion.div>
 
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((item) => (
-            <div
+          {features.map((item, idx) => (
+            <motion.div
               key={item.title}
-              className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.4, delay: idx * 0.08 }}
+              whileHover={{ y: -4 }}
+              className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
             >
               <div>
                 <div className="flex items-center justify-between">
@@ -98,11 +110,10 @@ export const FeaturesAndInstallmentSection: React.FC<FeaturesAndInstallmentSecti
               <div className="mt-4 border-t border-slate-100 pt-3 text-xs font-medium text-slate-500 dark:border-slate-800 dark:text-slate-400">
                 {item.footer}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
     </section>
   );
 };
-

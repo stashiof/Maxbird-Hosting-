@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Download,
   ShieldCheck,
@@ -14,12 +15,16 @@ import {
   Sparkles,
   Menu,
   X,
+  Share2,
+  Check,
+  Copy,
 } from 'lucide-react';
 import {
   SiteConfig,
   defaultSiteConfig,
   formatBengaliNumber,
   isConfiguredApkUrl,
+  buildShareableApkLinks,
 } from './config/siteConfig';
 import {
   subscribeToPortalSettings,
@@ -64,8 +69,19 @@ export default function App() {
     return false;
   });
 
-  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('download') === '1' || params.get('apk') === '1') {
+        return true;
+      }
+    }
+    return false;
+  });
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [shareToastMessage, setShareToastMessage] = useState<string | null>(null);
+  const [copiedApkLink, setCopiedApkLink] = useState(false);
 
   const resolvedLogoUrl =
     siteConfig.appIconUrl && siteConfig.appIconUrl.trim()
@@ -140,6 +156,42 @@ export default function App() {
     setIsDownloadModalOpen(true);
   };
 
+  const handleShareOrCopyApkLink = async () => {
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : 'https://maxbird.pages.dev';
+    const shareInfo = buildShareableApkLinks(origin, siteConfig);
+    const linkToCopy = isConfiguredApkUrl(shareInfo.directApkUrl)
+      ? shareInfo.directApkUrl
+      : shareInfo.portalDownloadUrl;
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(linkToCopy);
+      } catch {
+        // ignore clipboard error
+      }
+    }
+
+    setCopiedApkLink(true);
+    setShareToastMessage('APK ডাউনলোড লিংক কপি হয়েছে! যেকোনো জায়গায় শেয়ার করতে পারেন।');
+    setTimeout(() => {
+      setCopiedApkLink(false);
+      setShareToastMessage(null);
+    }, 2800);
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: shareInfo.shareTitle,
+          text: shareInfo.shareText,
+          url: shareInfo.portalDownloadUrl,
+        });
+      } catch {
+        // user dismissed native share sheet; clipboard copy is already done
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
       {/* TOP NAVIGATION BAR */}
@@ -148,7 +200,7 @@ export default function App() {
           {/* Zone 1: Official Logo + Brand Wordmark */}
           <a
             href="#home"
-            className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0 dark:text-white"
+            className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0 dark:text-white group"
           >
             <img
               src={resolvedLogoUrl}
@@ -159,7 +211,7 @@ export default function App() {
                 }
               }}
               alt={`${siteConfig.appName} লোগো`}
-              className="h-9 w-9 rounded-xl border border-slate-200 bg-white p-1 object-contain shadow-xs dark:border-slate-700"
+              className="h-9 w-9 rounded-xl border border-slate-200 bg-white p-1 object-contain shadow-xs transition-transform duration-200 group-hover:scale-105 dark:border-slate-700"
             />
             <span>{siteConfig.appName}</span>
           </a>
@@ -201,8 +253,27 @@ export default function App() {
             </a>
           </nav>
 
-          {/* Zone 3: Theme Toggle + Download CTA + Mobile Menu Button */}
+          {/* Zone 3: Share Link + Theme Toggle + Download CTA + Mobile Menu Button */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleShareOrCopyApkLink}
+              aria-label="APK লিংক শেয়ার বা কপি করুন"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 transition-colors"
+            >
+              {copiedApkLink ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-emerald-700 dark:text-emerald-400">লিংক কপি হয়েছে</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="h-3.5 w-3.5" />
+                  <span>APK শেয়ার</span>
+                </>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={() => setIsDark(!isDark)}
@@ -225,7 +296,7 @@ export default function App() {
             <button
               type="button"
               onClick={handleTriggerApkDownload}
-              className="rounded-xl bg-emerald-600 px-3.5 sm:px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-colors whitespace-nowrap shrink-0"
+              className="rounded-xl bg-emerald-600 px-3.5 sm:px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-colors whitespace-nowrap shrink-0 shadow-xs"
             >
               ডাউনলোড অ্যাপ
             </button>
@@ -243,48 +314,83 @@ export default function App() {
         </div>
 
         {/* Mobile Drawer Navigation */}
-        {isMobileMenuOpen && (
-          <div className="border-t border-slate-200 bg-white px-4 py-3 md:hidden dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex flex-col space-y-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
-              <a
-                href="#home"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                হোম
-              </a>
-              <a
-                href="#screenshots"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                অ্যাপের ছবি (Play Store View)
-              </a>
-              <a
-                href="#usage-guide"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                ইনস্টল ও ব্যবহারের নিয়ম
-              </a>
-              <a
-                href="#features"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                অ্যাপের সুবিধাসমূহ
-              </a>
-              <a
-                href="#faq"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                সচরাচর জিজ্ঞাসা (FAQ)
-              </a>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden border-t border-slate-200 bg-white px-4 py-3 md:hidden dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div className="flex flex-col space-y-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
+                <a
+                  href="#home"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  হোম
+                </a>
+                <a
+                  href="#screenshots"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  অ্যাপের ছবি (Play Store View)
+                </a>
+                <a
+                  href="#usage-guide"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  ইনস্টল ও ব্যবহারের নিয়ম
+                </a>
+                <a
+                  href="#features"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  অ্যাপের সুবিধাসমূহ
+                </a>
+                <a
+                  href="#faq"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  সচরাচর জিজ্ঞাসা (FAQ)
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleShareOrCopyApkLink();
+                  }}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-slate-800"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span>APK ডাউনলোড লিংক কপি / শেয়ার করুন</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
+
+      {/* TOAST FEEDBACK BANNER FOR LINK COPY/SHARE */}
+      <AnimatePresence>
+        {shareToastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            role="status"
+            aria-live="polite"
+            className="fixed top-16 left-1/2 z-50 -translate-x-1/2 rounded-2xl border border-emerald-500/40 bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-xl flex items-center gap-2 whitespace-nowrap"
+          >
+            <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+            <span>{shareToastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main>
         {/* HERO SECTION */}
@@ -295,54 +401,89 @@ export default function App() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             {/* Compact Notice Banner (Only when noticeText is set) */}
             {siteConfig.noticeText && siteConfig.noticeText.trim().length > 0 && (
-              <div className="mb-6 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 px-4 py-2.5 text-xs leading-relaxed text-slate-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-slate-200">
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+                className="mb-6 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 px-4 py-2.5 text-xs leading-relaxed text-slate-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-slate-200"
+              >
                 <strong className="font-bold text-emerald-700 dark:text-emerald-400">
                   অফিসিয়াল নোটিশ:
                 </strong>{' '}
                 {siteConfig.noticeText}
-              </div>
+              </motion.div>
             )}
 
             {/* 2-Column Hero Split */}
             <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-12 lg:gap-12">
               {/* Left 7 Columns: Concise Value Proposition & Primary APK Download CTA */}
-              <div className="lg:col-span-7">
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700 shadow-2xs dark:border-emerald-900/60 dark:bg-slate-900 dark:text-emerald-400">
-                  <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-                  <span>{siteConfig.appName} অফিসিয়াল অ্যান্ড্রয়েড অ্যাপ</span>
-                </div>
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, ease: 'easeOut' }}
+                className="lg:col-span-7"
+              >
+                <p className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
+                  <span>{siteConfig.appName} অফিসিয়াল অ্যান্ড্রয়েড অ্যাপ · ব্রাউজারেই সরাসরি ইনস্টলার</span>
+                </p>
 
-                <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem] leading-[1.3] dark:text-white">
+                <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem] leading-[1.28] dark:text-white">
                   পড়াশোনা হোক আরও সহজ, স্মার্ট ও সাশ্রয়ী — এখন আপনার হাতের মুঠোয়!
                 </h1>
 
                 <p className="mt-3.5 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base dark:text-slate-300">
-                  ভর্তির আগেই <strong>ফ্রি ট্রায়াল ক্লাস</strong> দেখে মান যাচাই করুন এবং বিকাশ বা নগদে সহজ <strong>২/৩ কিস্তিতে (Installment)</strong> কোর্সে যুক্ত হয়ে যেকোনো সময় পড়াশোনা চালিয়ে যান।
+                  ভর্তির আগেই <strong>ফ্রি ট্রায়াল ক্লাস</strong> দেখে মান যাচাই করুন এবং বিকাশ বা নগদে সহজ <strong>২/৩ কিস্তিতে (Installment)</strong> কোর্সে যুক্ত হয়ে যেকোনো সময় পড়াশোনা চালিয়ে যান। ডাউনলোড বাটনে ক্লিক করলেই ব্রাউজারের ভেতরে ডাউনলোড হয়ে সরাসরি <strong>Install</strong> অপশন চলে আসবে।
                 </p>
 
-                {/* Primary APK Download Action Block */}
-                <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                {/* Primary APK Download & Share Action Block */}
+                <div className="mt-6 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
                   <button
                     type="button"
                     onClick={handleTriggerApkDownload}
-                    className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 sm:px-7 py-3.5 sm:py-4 text-sm sm:text-base font-bold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 active:scale-[0.99] transition-all text-center"
+                    className="flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 px-6 sm:px-7 py-3.5 sm:py-4 text-sm sm:text-base font-bold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 active:scale-[0.99] transition-all text-center cursor-pointer"
                   >
                     <Download className="h-5 w-5 shrink-0" />
                     <span>অফিসিয়াল অ্যাপ ডাউনলোড করুন (APK)</span>
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={handleShareOrCopyApkLink}
+                    className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 sm:py-4 text-sm font-bold text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 transition-colors text-center cursor-pointer"
+                  >
+                    {copiedApkLink ? (
+                      <>
+                        <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-emerald-700 dark:text-emerald-400">
+                          APK লিংক কপি হয়েছে!
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        <span>APK লিংক শেয়ার / কপি</span>
+                      </>
+                    )}
+                  </button>
+
                   <a
                     href="#screenshots"
-                    className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3.5 sm:py-4 text-sm font-bold text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 transition-colors text-center"
+                    className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs sm:text-sm font-semibold text-slate-600 hover:text-emerald-700 dark:text-slate-300 dark:hover:text-emerald-400 transition-colors text-center"
                   >
                     <BookOpen className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span>অ্যাপের স্ক্রিনশট দেখুন</span>
                   </a>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Right 5 Columns: Official Play Store Style App Card */}
-              <div className="lg:col-span-5">
+              <motion.div
+                initial={{ opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }}
+                className="lg:col-span-5"
+              >
                 <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-md dark:border-slate-800 dark:bg-slate-900">
                   <div className="flex items-center gap-4">
                     <img
@@ -356,16 +497,20 @@ export default function App() {
                       alt={`${siteConfig.appName} লোগো`}
                       className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 rounded-2xl border border-slate-200 bg-white p-1.5 object-contain shadow-sm dark:border-slate-700"
                     />
-                    <div>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
-                        <ShieldCheck className="h-3 w-3" />
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
                         <span>Play Protect Verified</span>
-                      </span>
-                      <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
+                      </p>
+                      <h2 className="mt-0.5 text-xl font-bold text-slate-900 truncate dark:text-white">
                         {siteConfig.appName}
                       </h2>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        ভার্সন: <strong className="text-slate-700 dark:text-slate-200">{siteConfig.appVersion}</strong> · {siteConfig.minAndroidVersion} · {siteConfig.lastUpdated}
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        ভার্সন: <strong className="text-slate-700 dark:text-slate-200">{siteConfig.appVersion}</strong>
+                        <span aria-hidden="true"> · </span>
+                        <span>{siteConfig.minAndroidVersion}</span>
+                        <span aria-hidden="true"> · </span>
+                        <span>{siteConfig.lastUpdated}</span>
                       </p>
                     </div>
                   </div>
@@ -377,7 +522,7 @@ export default function App() {
                       <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">রেটিং</p>
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900 dark:text-white">
+                      <p className="font-bold font-mono-num text-slate-900 dark:text-white">
                         {siteConfig.fileSize && siteConfig.fileSize !== '0 MB'
                           ? siteConfig.fileSize
                           : 'APK'}
@@ -404,18 +549,33 @@ export default function App() {
                     </div>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={handleTriggerApkDownload}
-                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-xs sm:text-sm font-bold text-white hover:bg-emerald-500 transition-colors"
-                  >
-                    <Download className="h-4 w-4 shrink-0" />
-                    <span>
-                      সরাসরি APK ইনস্টল / ডাউনলোড করুন
-                    </span>
-                  </button>
+                  <div className="mt-4 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleTriggerApkDownload}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-xs sm:text-sm font-bold text-white hover:bg-emerald-500 transition-colors cursor-pointer"
+                    >
+                      <Download className="h-4 w-4 shrink-0" />
+                      <span>ব্রাউজারে ডাউনলোড ও ইনস্টল করুন</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleShareOrCopyApkLink}
+                      aria-label="APK ডাউনলোড লিংক কপি করুন"
+                      title="APK ডাউনলোড লিংক কপি করুন"
+                      className="flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors shrink-0 cursor-pointer"
+                    >
+                      {copiedApkLink ? (
+                        <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      <span className="hidden sm:inline">লিংক কপি</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </section>
@@ -518,13 +678,13 @@ export default function App() {
         </a>
       </div>
 
-      {/* STUDENT APK DOWNLOAD MODAL */}
+      {/* IN-BROWSER APK DOWNLOAD & INSTALL MODAL */}
       <ApkDownloadModal
         isOpen={isDownloadModalOpen}
         onClose={() => setIsDownloadModalOpen(false)}
         config={siteConfig}
+        autoStart={true}
       />
     </div>
   );
 }
-

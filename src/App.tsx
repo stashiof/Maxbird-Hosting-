@@ -134,12 +134,19 @@ export default function App() {
       {/* STRICT 3-ZONE TOP NAVIGATION BAR */}
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/95">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-4 py-3 sm:px-6 lg:px-8">
-          {/* Zone 1: Single Text Element Wordmark */}
+          {/* Zone 1: Brand Logo + Wordmark */}
           <a
             href="#home"
-            className="text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0 dark:text-white"
+            className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0 dark:text-white"
           >
-            {siteConfig.appName}
+            {siteConfig.appIconUrl && siteConfig.appIconUrl.trim() ? (
+              <img
+                src={siteConfig.appIconUrl}
+                alt={`${siteConfig.appName} লোগো`}
+                className="h-8 w-8 rounded-xl border border-slate-200 object-cover shadow-sm dark:border-slate-700"
+              />
+            ) : null}
+            <span>{siteConfig.appName}</span>
           </a>
 
           {/* Zone 2: 5 Clean Single-Line Text Navigation Links */}
@@ -306,21 +313,21 @@ export default function App() {
 
                 {/* Primary APK Download Action Block */}
                 <div className="mt-8 space-y-4">
-                  <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
                     <button
                       type="button"
                       onClick={handleTriggerApkDownload}
-                      className="flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-600 px-7 py-4 text-base font-bold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 active:scale-[0.99] transition-all whitespace-nowrap shrink-0"
+                      className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 sm:px-7 py-3.5 sm:py-4 text-sm sm:text-base font-bold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 active:scale-[0.99] transition-all text-center"
                     >
-                      <Download className="h-5 w-5" />
+                      <Download className="h-5 w-5 shrink-0" />
                       <span>📥 অফিসিয়াল অ্যাপ ডাউনলোড করুন (APK)</span>
                     </button>
 
                     <a
                       href="#screenshots"
-                      className="flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-4 text-sm font-bold text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0"
+                      className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 sm:px-5 py-3.5 sm:py-4 text-sm font-bold text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 transition-colors text-center"
                     >
-                      <BookOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <BookOpen className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                       <span>অ্যাপের স্ক্রিনশট ও নিয়ম দেখুন</span>
                     </a>
                   </div>

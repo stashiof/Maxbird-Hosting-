@@ -26,6 +26,7 @@ import {
   incrementFirestoreDownloadCount,
 } from './firebase';
 import { MobileAppMockup, PhoneScreenTab } from './components/MobileAppMockup';
+import { PlayStoreScreenshotsSection } from './components/PlayStoreScreenshotsSection';
 import { StepByStepGuide } from './components/StepByStepGuide';
 import { FeaturesAndInstallmentSection } from './components/FeaturesAndInstallmentSection';
 import { ApkInstallGuide } from './components/ApkInstallGuide';
@@ -153,6 +154,12 @@ export default function App() {
               হোম
             </a>
             <a
+              href="#screenshots"
+              className="hover:text-emerald-700 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 dark:hover:text-emerald-400"
+            >
+              অ্যাপের ছবি
+            </a>
+            <a
               href="#usage-guide"
               className="hover:text-emerald-700 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 dark:hover:text-emerald-400"
             >
@@ -163,12 +170,6 @@ export default function App() {
               className="hover:text-emerald-700 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 dark:hover:text-emerald-400"
             >
               কোর্স ও সুবিধাসমূহ
-            </a>
-            <a
-              href="#installment-trial"
-              className="hover:text-emerald-700 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 dark:hover:text-emerald-400"
-            >
-              কিস্তি ও ফ্রি ট্রায়াল
             </a>
             <a
               href="#faq"
@@ -211,6 +212,13 @@ export default function App() {
                 হোম
               </a>
               <a
+                href="#screenshots"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                অ্যাপের ছবি (Play Store View)
+              </a>
+              <a
                 href="#usage-guide"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -223,13 +231,6 @@ export default function App() {
                 className="rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 কোর্স ও সুবিধাসমূহ
-              </a>
-              <a
-                href="#installment-trial"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                কিস্তি ও ফ্রি ট্রায়াল
               </a>
               <a
                 href="#faq"
@@ -316,11 +317,11 @@ export default function App() {
                     </button>
 
                     <a
-                      href="#usage-guide"
+                      href="#screenshots"
                       className="flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-4 text-sm font-bold text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0"
                     >
                       <BookOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                      <span>অ্যাপ ব্যবহারের ৬টি ধাপ দেখুন</span>
+                      <span>অ্যাপের স্ক্রিনশট ও নিয়ম দেখুন</span>
                     </a>
                   </div>
 
@@ -398,6 +399,12 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        {/* SECTION ক.২: GOOGLE PLAY STORE STYLE APP SCREENSHOTS & LISTING */}
+        <PlayStoreScreenshotsSection
+          config={siteConfig}
+          onTriggerApkDownload={handleTriggerApkDownload}
+        />
 
         {/* SECTION খ: 6-STEP VISUAL GUIDE */}
         <StepByStepGuide onTriggerApkDownload={handleTriggerApkDownload} />

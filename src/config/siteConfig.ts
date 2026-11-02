@@ -13,6 +13,8 @@ export interface SiteConfig {
   minAndroidVersion: string;
   lastUpdated: string;
   sha256Short: string;
+  appIconUrl?: string;
+  appScreenshots?: string[];
 }
 
 export const defaultSiteConfig: SiteConfig = {
@@ -30,10 +32,25 @@ export const defaultSiteConfig: SiteConfig = {
   minAndroidVersion: 'Android 7.0+',
   lastUpdated: 'অক্টোবর ২০২৬',
   sha256Short: 'Play Protect Verified',
+  appIconUrl: '',
+  appScreenshots: [],
 };
 
 export const ADMIN_DEFAULT_PIN = '1234';
 export const ADMIN_OWNER_EMAIL = 'maiafahim1234@gmail.com';
+
+export function sanitizeScreenshotsList(raw: unknown): string[] {
+  if (!raw) return [];
+  const items: string[] = Array.isArray(raw)
+    ? raw.map((item) => String(item ?? '').trim())
+    : typeof raw === 'string'
+    ? raw.split(/[\n,]+/).map((s) => s.trim())
+    : [];
+  return items
+    .filter((url) => url.length > 0 && /^https?:\/\//i.test(url))
+    .map((url) => url.slice(0, 1000))
+    .slice(0, 15);
+}
 
 export function isConfiguredApkUrl(url: string): boolean {
   const clean = url.trim();
@@ -87,6 +104,8 @@ export function sanitizeSiteConfigForFirestore(config: SiteConfig): SiteConfig {
     minAndroidVersion: (config.minAndroidVersion || defaultSiteConfig.minAndroidVersion).trim().slice(0, 50),
     lastUpdated: (config.lastUpdated || defaultSiteConfig.lastUpdated).trim().slice(0, 60),
     sha256Short: (config.sha256Short || defaultSiteConfig.sha256Short).trim().slice(0, 150),
+    appIconUrl: (config.appIconUrl || '').trim().slice(0, 1000),
+    appScreenshots: sanitizeScreenshotsList(config.appScreenshots),
   };
 }
 

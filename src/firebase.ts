@@ -22,6 +22,7 @@ import {
   SiteConfig,
   defaultSiteConfig,
   sanitizeSiteConfigForFirestore,
+  sanitizeScreenshotsList,
 } from './config/siteConfig';
 
 const app = initializeApp(firebaseConfig);
@@ -108,6 +109,8 @@ export interface FirestorePortalDoc {
   minAndroidVersion: string;
   lastUpdated: string;
   sha256Short: string;
+  appIconUrl?: string;
+  appScreenshots?: string[];
   ownerId: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -155,6 +158,8 @@ export function subscribeToPortalSettings(
           data.minAndroidVersion || defaultSiteConfig.minAndroidVersion,
         lastUpdated: data.lastUpdated || defaultSiteConfig.lastUpdated,
         sha256Short: data.sha256Short || defaultSiteConfig.sha256Short,
+        appIconUrl: data.appIconUrl || '',
+        appScreenshots: sanitizeScreenshotsList(data.appScreenshots),
       };
       onData(
         merged,
@@ -206,6 +211,8 @@ export async function savePortalSettingsToFirestore(
         minAndroidVersion: clean.minAndroidVersion,
         lastUpdated: clean.lastUpdated,
         sha256Short: clean.sha256Short,
+        appIconUrl: clean.appIconUrl || '',
+        appScreenshots: clean.appScreenshots || [],
         ownerId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -226,6 +233,8 @@ export async function savePortalSettingsToFirestore(
         minAndroidVersion: clean.minAndroidVersion,
         lastUpdated: clean.lastUpdated,
         sha256Short: clean.sha256Short,
+        appIconUrl: clean.appIconUrl || '',
+        appScreenshots: clean.appScreenshots || [],
         updatedAt: serverTimestamp(),
       });
     }
